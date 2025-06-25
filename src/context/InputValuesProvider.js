@@ -82,14 +82,15 @@ const InputValuesProvider = ({ children }) => {
               searchParams.delete('chapter');
               searchParams.delete('verse');
               searchParams.delete('versemde');
-
               appendQueryInUrl(e);
+              appendQueryInUrl({ id: 'verse', value: '1' });
+
               newState = {
                 ...newState,
                 [e?.id]: e?.value,
                 chapter: 1,
                 phrase: '',
-                verse: null,
+                verse: 1,
                 versemde: null,
                 separate: false,
               };
@@ -99,12 +100,13 @@ const InputValuesProvider = ({ children }) => {
               searchParams.delete('verse');
               searchParams.delete('versemde');
               appendQueryInUrl(e);
+              appendQueryInUrl({ id: 'verse', value: '1' });
 
               newState = {
                 ...newState,
                 [e?.id]: e?.value,
                 phrase: '',
-                verse: null,
+                verse: 1,
                 versemde: null,
                 separate: false,
               };

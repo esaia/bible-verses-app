@@ -34,7 +34,7 @@
   /* .my-react-select-container {
   } */
   .my-react-select-container .my-react-select__control {
-    @apply dark:bg-[#374151] dark:text-white dark:hover:text-black;
+    @apply dark:bg-[#374151] dark:text-white dark:hover:text-black dark:border-gray-600;
   }
 
   .my-react-select-container .my-react-select__control--is-focused {

@@ -111,7 +111,7 @@ const Header = () => {
 
             <form
               onSubmit={e => submitSearchForm(e)}
-              className="   w-[300px] h-[37px] rounded-[3px] border-[1.2px] border-gray-300   flex-auto dark:bg-[#374151] dark:text-white "
+              className="   w-[300px] h-[37px] rounded-[3px] border-[1.2px] border-gray-300   flex-auto dark:bg-[#374151] dark:border-gray-600 dark:text-white "
             >
               <input
                 onChange={e => {
