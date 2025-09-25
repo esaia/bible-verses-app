@@ -33,7 +33,7 @@ const VerseArrows = () => {
   };
 
   return (
-    <div className="w-full flex justify-end items-center  select-none">
+    <div className="w-full flex justify-end items-center  select-none ">
       <div className=" flex justify-end gap-3">
         <TiArrowLeftThick
           className="text-3xl cursor-pointer text-gray-300 dark:text-[#374151] hover:text-gray-500 hover:dark:text-[#282f3b]"

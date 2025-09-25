@@ -1,12 +1,23 @@
-import React from 'react';
 import Select from 'react-select';
 import useBibleContext from '../hooks/useBibleContext';
 import useData from '../hooks/useData';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 
 const Header = () => {
   const { inputValues, inputDispatch, refetch } = useBibleContext();
   const { languages, versions, book, chapter, verse, versemde } = useData();
+
+  const selectTheme = useMemo(() => {
+    return theme => ({
+      ...theme,
+      colors: {
+        ...theme.colors,
+        primary25: 'transparent',
+        primary: '#2256ab',
+      },
+    });
+  }, []);
 
   const changeInputValue = (e, triggleAction) => {
     inputDispatch({
@@ -24,6 +35,7 @@ const Header = () => {
 
     inputValueBlankAndFetch();
   };
+
   return (
     <>
       <div className="w-full">
@@ -49,6 +61,7 @@ const Header = () => {
               onChange={(e, triggleAction) => changeInputValue(e, triggleAction)}
               className="my-react-select-container  w-[100px]  flex-auto z-[52]"
               classNamePrefix="my-react-select"
+              theme={selectTheme}
             />
             <Select
               placeholder={'ვერსია'}
@@ -62,6 +75,7 @@ const Header = () => {
               onChange={(e, triggleAction) => changeInputValue(e, triggleAction)}
               className="my-react-select-container w-[300px]  flex-auto  z-[50]"
               classNamePrefix="my-react-select"
+              theme={selectTheme}
             />
 
             <Select
@@ -72,6 +86,7 @@ const Header = () => {
               onChange={(e, triggleAction) => changeInputValue(e, triggleAction)}
               className="my-react-select-container w-[300px]  flex-auto  "
               classNamePrefix="my-react-select"
+              theme={selectTheme}
             />
 
             <Select
@@ -83,6 +98,7 @@ const Header = () => {
               onChange={(e, triggleAction) => changeInputValue(e, triggleAction)}
               className="my-react-select-container w-[180px] flex-auto "
               classNamePrefix="my-react-select"
+              theme={selectTheme}
             />
 
             <Select
@@ -95,6 +111,7 @@ const Header = () => {
               onChange={(e, triggleAction) => changeInputValue(e, triggleAction)}
               className="my-react-select-container w-[180px] flex-auto"
               classNamePrefix="my-react-select"
+              theme={selectTheme}
             />
 
             <Select
@@ -107,6 +124,7 @@ const Header = () => {
               onChange={(e, triggleAction) => changeInputValue(e, triggleAction)}
               className="my-react-select-container w-[180px] flex-auto"
               classNamePrefix="my-react-select"
+              theme={selectTheme}
             />
 
             <form
