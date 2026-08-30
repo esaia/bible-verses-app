@@ -10,9 +10,14 @@ const ALIGNMENTS = [
   { value: 'right', label: 'Align right', Icon: MdFormatAlignRight },
 ];
 
+// Only the first two are Georgian-only / Latin-only; the rest cover Georgian,
+// Latin and Cyrillic, so one typeface serves all three projector languages.
 const FONTS = [
-  { value: 'font-banner', label: 'BPG Banner Caps' },
-  { value: 'font-valera', label: 'Varela Round' },
+  { value: 'font-banner', label: 'BPG Banner Caps (Georgian)' },
+  { value: 'font-valera', label: 'Varela Round (Latin)' },
+  { value: 'font-firago', label: 'FiraGO' },
+  { value: 'font-notosans', label: 'Noto Sans' },
+  { value: 'font-notoserif', label: 'Noto Serif' },
 ];
 
 /**

@@ -82,6 +82,10 @@ module.exports = withMT({
     fontFamily: {
       valera: 'Varela Round',
       banner: ['BPG Banner Caps', 'sans-serif'],
+      // Trilingual projector faces: Georgian, Latin and Cyrillic in one family.
+      firago: ['FiraGO', 'Noto Sans Georgian', 'sans-serif'],
+      notosans: ['Noto Sans Trilingual', 'Noto Sans Georgian', 'sans-serif'],
+      notoserif: ['Noto Serif Trilingual', 'Noto Serif Georgian', 'serif'],
       // Console chrome. System stack so no extra font request, with Georgian
       // and Cyrillic capable fallbacks.
       ui: [
