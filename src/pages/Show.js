@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { SlSizeFullscreen } from 'react-icons/sl';
 import TextShow from '../components/result-versions/TextShow';
 import { fitText, refitOnFontLoad } from '../lib/fitText';
+import { themeClassName } from '../data/themes';
 
 const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
@@ -89,87 +90,19 @@ const Show = () => {
   }, []);
 
   useEffect(() => {
-    let themeClass;
-
     if (!imageContainer.current) {
       return;
     }
 
     imageContainer.current.style.backgroundImage = '';
 
-    switch (theme) {
-      case '1':
-        themeClass = 'bg-1img';
-        break;
-      case '2':
-        themeClass = 'bg-2img';
-        break;
-      case '3':
-        themeClass = 'bg-3img';
-        break;
-      case '4':
-        themeClass = 'bg-4img';
-        break;
-      case '5':
-        themeClass = 'bg-5img';
-        break;
-      case '6':
-        themeClass = 'bg-6img';
-        break;
-      case '7':
-        themeClass = 'bg-7img';
-        break;
-      case '8':
-        themeClass = 'bg-8img';
-        break;
-      case '9':
-        themeClass = 'bg-9img';
-        break;
-      case '10':
-        themeClass = 'bg-10img';
-        break;
-      case '11':
-        themeClass = 'bg-11img';
-        break;
-      case '12':
-        themeClass = 'bg-12img';
-        break;
-      case '13':
-        themeClass = 'bg-13img';
-        break;
-      case '14':
-        themeClass = 'bg-14img';
-        break;
-      case '15':
-        themeClass = 'bg-15img';
-        break;
-      case '16':
-        themeClass = 'bg-16img';
-        break;
-      case '17':
-        themeClass = 'bg-17img';
-        break;
-      case '18':
-        themeClass = 'bg-18img';
-        break;
-      case '19':
-        themeClass = 'bg-19img';
-        break;
-      case '20':
-        themeClass = 'bg-20img';
-        break;
-      case 'dynamicIMG':
-        const localStorageImg = localStorage.getItem('dynamicImage');
-        imageContainer.current.style.backgroundImage = `url(${localStorageImg})`;
-
-        themeClass = '';
-
-        break;
-      default:
-        themeClass = 'bg-1img';
+    if (theme === 'dynamicIMG') {
+      imageContainer.current.style.backgroundImage = `url(${localStorage.getItem('dynamicImage')})`;
+      setBgStr('');
+      return;
     }
 
-    setBgStr(themeClass);
+    setBgStr(themeClassName(theme));
   }, [theme]);
 
   useEffect(() => {

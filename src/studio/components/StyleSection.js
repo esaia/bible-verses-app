@@ -1,8 +1,7 @@
 import { MdFormatAlignCenter, MdFormatAlignLeft, MdFormatAlignRight } from 'react-icons/md';
 import Select from '../ui/Select';
 import { useStudio } from '../StudioProvider';
-
-const THEMES = Array.from({ length: 20 }, (_, i) => String(i + 1));
+import { THEMES } from '../../data/themes';
 
 const ALIGNMENTS = [
   { value: 'left', label: 'Align left', Icon: MdFormatAlignLeft },
@@ -30,19 +29,27 @@ const StyleSection = () => {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-1.5">
-        {THEMES.map(id => (
-          <button
-            key={id}
-            type="button"
-            aria-label={`Background ${id}`}
-            onClick={() => setTheme(id)}
-            className={`overflow-hidden rounded-[4px] transition-shadow duration-150 focus:outline-none
-              ${theme === id ? 'ring-2 ring-studio-accent' : 'ring-1 ring-studio-border hover:ring-studio-faint'}`}
-          >
-            <img src={`/images/${id}.jpeg`} alt="" className="h-9 w-full object-cover" />
-          </button>
-        ))}
+      <div
+        className="studio-scroll max-h-[188px] overflow-y-auto rounded-studio border border-studio-border
+          bg-studio-surface p-1.5"
+      >
+        <div className="grid grid-cols-4 gap-1.5">
+          {THEMES.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              aria-label={item.label}
+              title={item.label}
+              onClick={() => setTheme(item.id)}
+              className={`overflow-hidden rounded-[4px] transition-shadow duration-150 focus:outline-none
+                ${
+                  theme === item.id ? 'ring-2 ring-studio-accent' : 'ring-1 ring-studio-border hover:ring-studio-faint'
+                }`}
+            >
+              <img src={item.src} alt="" loading="lazy" className="h-9 w-full object-cover" />
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">

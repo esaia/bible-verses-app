@@ -1,29 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Radio } from '@material-tailwind/react';
 import useData from '../hooks/useData';
+import { THEMES } from '../data/themes';
 
-const themeImages = [
-  { id: '1', src: './images/1.jpeg' },
-  { id: '2', src: './images/2.jpeg' },
-  { id: '3', src: './images/3.jpeg' },
-  { id: '4', src: './images/4.jpeg' },
-  { id: '5', src: './images/5.jpeg' },
-  { id: '6', src: './images/6.jpeg' },
-  { id: '7', src: './images/7.jpeg' },
-  { id: '8', src: './images/8.jpeg' },
-  { id: '9', src: './images/9.jpeg' },
-  { id: '10', src: './images/10.jpeg' },
-  { id: '11', src: './images/11.jpeg' },
-  { id: '12', src: './images/12.jpeg' },
-  { id: '13', src: './images/13.jpeg' },
-  { id: '14', src: './images/14.jpeg' },
-  { id: '15', src: './images/15.jpeg' },
-  { id: '16', src: './images/16.jpeg' },
-  { id: '17', src: './images/17.jpeg' },
-  { id: '18', src: './images/18.jpeg' },
-  { id: '19', src: './images/19.jpeg' },
-  { id: '20', src: './images/20.jpeg' },
-];
+// Shared with /studio and the projector.
+const themeImages = THEMES;
 
 const fonts = [
   { id: 'banner', value: 'font-banner', title: 'banner' },
@@ -113,7 +94,10 @@ const SelectTheme = () => {
                   onChange={() => handleFont(item.value)}
                   checked={item.value === fontTitle}
                 />
-                <label htmlFor={item.id} className={`dark:text-white cursor-pointer ${generateFontClassStr(item.title)}`}>
+                <label
+                  htmlFor={item.id}
+                  className={`dark:text-white cursor-pointer ${generateFontClassStr(item.title)}`}
+                >
                   {item.title}
                 </label>
               </div>
