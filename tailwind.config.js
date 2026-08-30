@@ -12,8 +12,12 @@ module.exports = withMT({
 
   theme: {
     fontSize: {
+      // `xs` and `lg` are re-added for the /studio design system; the rest is
+      // the original ramp the legacy pages depend on.
+      xs: '0.75rem',
       sm: '0.8rem',
       base: '1rem',
+      lg: '1.125rem',
       xl: '1.25rem',
       '2xl': '1.563rem',
       '3xl': '1.953rem',
@@ -25,6 +29,33 @@ module.exports = withMT({
       '9xl': '7.052rem',
     },
     extend: {
+      colors: {
+        // /studio design system. Light-only, modelled on TheOpenPresenter.
+        studio: {
+          bg: '#ffffff',
+          surface: '#f7f8fa',
+          bar: '#1b1f27',
+          border: '#e5e7eb',
+          divider: '#eef0f3',
+          text: '#111318',
+          muted: '#6b7280',
+          faint: '#9ca3af',
+          accent: '#2563eb',
+          live: '#ef4444',
+          go: '#1f7a4d',
+          danger: '#dc2626',
+          slide: '#000000',
+        },
+      },
+      boxShadow: {
+        studio: '0 1px 2px rgba(16, 24, 40, 0.05)',
+        'studio-modal': '0 12px 32px rgba(16, 24, 40, 0.16)',
+        'studio-panel': '0 8px 24px rgba(16, 24, 40, 0.12)',
+      },
+      borderRadius: {
+        studio: '6px',
+        'studio-lg': '10px',
+      },
       backgroundImage: {
         '1img': "url('/public/images/1.jpeg')",
         '2img': "url('/public/images/2.jpeg')",
@@ -51,6 +82,18 @@ module.exports = withMT({
     fontFamily: {
       valera: 'Varela Round',
       banner: ['BPG Banner Caps', 'sans-serif'],
+      // Console chrome. System stack so no extra font request, with Georgian
+      // and Cyrillic capable fallbacks.
+      ui: [
+        '-apple-system',
+        'BlinkMacSystemFont',
+        'Segoe UI',
+        'Noto Sans Georgian',
+        'Sylfaen',
+        'Helvetica Neue',
+        'Arial',
+        'sans-serif',
+      ],
     },
   },
 

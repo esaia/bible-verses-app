@@ -6,6 +6,7 @@ import { useBibleSettingContext } from './context/BibleSettingProvider';
 import useData from './hooks/useData';
 import Donate from './pages/Donate';
 import Bible from './pages/Bible';
+import Studio from './pages/Studio';
 
 function App() {
   const { darkMode } = useBibleSettingContext();
@@ -21,6 +22,7 @@ function App() {
             <Route path="/doc" element={<Documentation />} />
             <Route path="/donation" element={<Donate />} />
             <Route path="/bible" element={<Bible />} />
+            <Route path="/studio" element={<Studio />} />
           </Routes>
         </div>
       </div>

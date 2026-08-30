@@ -29,6 +29,28 @@
   font-style: normal;
 }
 
+.studio-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.2);
+  cursor: pointer;
+}
+
+.studio-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.2);
+  cursor: pointer;
+}
+
 @layer components {
   .showbackground {
     @apply bg-no-repeat bg-center bg-cover;

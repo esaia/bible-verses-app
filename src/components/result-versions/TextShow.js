@@ -1,56 +1,35 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
 import useData from '../../hooks/useData';
 
+/**
+ * One language's block on the projector. Fading is handled by the parent so
+ * the whole screen crossfades as a unit and the text is only remeasured while
+ * it is invisible.
+ */
 const TextShow = ({ showData, lang }) => {
   const { bibleNames } = useData();
-  const [taviMuxli, setTaviMuxli] = useState('');
 
-  useEffect(() => {
-    if (showData) {
-      const lastIndex = showData[lang]?.length - 1;
-      const name = bibleNames[lang][+showData[lang][0]?.wigni + 2];
-      const chapter = showData[lang][0]?.tavi;
-      const muxli =
-        showData[lang].length > 1
-          ? `${showData[lang][0]?.muxli}-${showData[lang][lastIndex]?.muxli}`
-          : showData[lang][0]?.muxli;
+  const verses = showData?.[lang] || [];
 
-      setTaviMuxli(`${name} ${chapter}:${muxli}`);
-    }
-  }, [showData]);
+  if (verses.length === 0) {
+    return null;
+  }
+
+  const first = verses[0];
+  const last = verses[verses.length - 1];
+  const name = bibleNames[lang]?.[+first?.wigni + 2] || '';
+  const muxli = verses.length > 1 ? `${first?.muxli}-${last?.muxli}` : first?.muxli;
 
   return (
-    <AnimatePresence>
-      {showData[lang].length !== 0 && (
-        <div className="w-full">
-          {showData[lang].map((item, i) => {
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 5 }}
-                transition={{ duration: 0.3, type: 'tween' }}
-              >
-                <div key={item.id}>
-                  <p className={`showText `}>{item.bv}</p>
-                </div>
-              </motion.div>
-            );
-          })}
+    <div className="w-full">
+      {verses.map((item, i) => (
+        <p className="showText" key={i}>
+          {item.bv}
+        </p>
+      ))}
 
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-            transition={{ duration: 0.3, type: 'tween' }}
-          >
-            <h3 className={`showText italic text-gray-300/90 `}>{taviMuxli}</h3>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+      <h3 className="showText italic text-gray-300/90">{`${name} ${first?.tavi}:${muxli}`}</h3>
+    </div>
   );
 };
 

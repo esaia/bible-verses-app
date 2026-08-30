@@ -1,6 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SlSizeFullscreen } from 'react-icons/sl';
 import TextShow from '../components/result-versions/TextShow';
+import { fitText, refitOnFontLoad } from '../lib/fitText';
+
+const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
+
+const LANGS = ['geo', 'eng', 'rus'];
+const DEFAULT_ORDER = ['eng', 'geo', 'rus'];
+
+const readOrder = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('projectorOrder'));
+    const valid = Array.isArray(stored) && stored.length === LANGS.length && LANGS.every(lang => stored.includes(lang));
+
+    return valid ? stored : DEFAULT_ORDER;
+  } catch (e) {
+    return DEFAULT_ORDER;
+  }
+};
+
+const FADE_MS = 320;
+const MIN_FONT_SIZE = 12;
+const MAX_FONT_SIZE = 64;
+const VERTICAL_MARGIN = 120;
 
 const Show = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -8,8 +30,10 @@ const Show = () => {
   const [bgStr, setBgStr] = useState('');
 
   const [showData, setShowData] = useState(JSON.parse(localStorage.getItem('showData')));
-  const [theme, setTheme] = useState(localStorage.getItem('themeNumber') || 1);
+  const [theme, setTheme] = useState(localStorage.getItem('themeNumber') || '1');
   const [font, setFont] = useState(localStorage.getItem('font') || 'font-banner');
+  const [align, setAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
+  const [order, setOrder] = useState(readOrder);
   const [projectorLanguages, setProjectorLanguages] = useState(
     JSON.parse(localStorage.getItem('projectorLanguages')) || {
       geo: false,
@@ -21,25 +45,40 @@ const Show = () => {
   const imageContainer = useRef();
   const innerContainerRef = useRef();
 
-  const handleFullscreenClick = () => {
-    if (!isFullScreen) {
-      document.documentElement.requestFullscreen();
+  // What is on screen right now, which lags `showData` by one fade. Swapping
+  // only while the text is invisible means the refit measures the incoming
+  // verse, and the audience never sees a hard cut.
+  const [displayed, setDisplayed] = useState(showData);
+  const [visible, setVisible] = useState(false);
 
-      setIsFullScreen(true);
+  const handleFullscreenClick = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
     } else {
       document.exitFullscreen();
-      setIsFullScreen(false);
     }
   };
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      setProjectorLanguages(JSON.parse(localStorage.getItem('projectorLanguages')));
-      setTheme(localStorage.getItem('themeNumber'));
-      setShowData(JSON.parse(localStorage.getItem('showData')));
-      setFont(localStorage.getItem('font'));
+    const handleFullscreenChange = () => setIsFullScreen(Boolean(document.fullscreenElement));
 
-      // resizeText();
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setProjectorLanguages(
+        JSON.parse(localStorage.getItem('projectorLanguages')) || { geo: false, eng: false, rus: false },
+      );
+      setTheme(localStorage.getItem('themeNumber') || '1');
+      setShowData(JSON.parse(localStorage.getItem('showData')));
+      setFont(localStorage.getItem('font') || 'font-banner');
+      setAlign(localStorage.getItem('projectorAlign') || 'left');
+      setOrder(readOrder());
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -51,6 +90,10 @@ const Show = () => {
 
   useEffect(() => {
     let themeClass;
+
+    if (!imageContainer.current) {
+      return;
+    }
 
     imageContainer.current.style.backgroundImage = '';
 
@@ -130,40 +173,70 @@ const Show = () => {
   }, [theme]);
 
   useEffect(() => {
-    resizeText();
-  });
-
-  const resizeText = () => {
-    let bodyHeight = 1000;
-    let boxHeight = 0;
-    innerContainerRef.current.style.fontSize = '10px';
-
-    for (let i = 2; i < 70; i++) {
-      innerContainerRef.current.style.fontSize = ` ${i}px`;
-      bodyHeight = window.innerHeight;
-      boxHeight = innerContainerRef?.current.offsetHeight;
-      if (boxHeight + 150 > bodyHeight) {
-        break;
-      }
+    if (JSON.stringify(showData) === JSON.stringify(displayed)) {
+      setVisible(true);
+      return undefined;
     }
+
+    setVisible(false);
+
+    const swap = setTimeout(() => {
+      setDisplayed(showData);
+      setVisible(true);
+    }, FADE_MS);
+
+    return () => clearTimeout(swap);
+  }, [showData, displayed]);
+
+  useEffect(() => {
+    resizeText();
+
+    // The projector font arrives asynchronously; the first measurement uses
+    // fallback metrics, so refit once it has actually swapped in.
+    const cancelFontRefit = refitOnFontLoad(resizeText);
+    const frame = requestAnimationFrame(resizeText);
+
+    window.addEventListener('resize', resizeText);
+
+    return () => {
+      cancelFontRefit();
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', resizeText);
+    };
+  }, [displayed, projectorLanguages, font, align, order]);
+
+  /**
+   * Fit the passage to the screen. The upper bound stops a two-word verse from
+   * filling the whole projector; the lower bound keeps a long passage legible.
+   */
+  const resizeText = () => {
+    fitText(innerContainerRef.current, window.innerHeight - VERTICAL_MARGIN, {
+      min: MIN_FONT_SIZE,
+      max: Math.min(MAX_FONT_SIZE, Math.round(window.innerHeight / 13)),
+    });
   };
 
   return (
     <div className={`flex justify-center items-center w-full h-screen ${font}`}>
       <div
         ref={imageContainer}
-        className={`w-full h-full px-10 flex justify-center items-center  flex-col  gap-12 bg-blend-overlay bgblind showbackground  overflow-hidden   ${bgStr} `}
+        className={`relative w-full h-full px-10 flex justify-center items-center  flex-col  gap-12 bg-blend-overlay bgblind showbackground  overflow-hidden   ${bgStr} `}
       >
         {!isFullScreen && (
-          <div className="absolute right-0 bottom-0 bg-white p-4 cursor-pointer">
+          <div className="absolute right-0 bottom-0 z-30 bg-white p-4 cursor-pointer">
             <SlSizeFullscreen onClick={handleFullscreenClick} className="text-4xl" />
           </div>
         )}
 
-        <div className="max-w-[2000px] py-[10px]" ref={innerContainerRef}>
-          {projectorLanguages?.eng && showData && <TextShow lang="eng" showData={showData} />}
-          {projectorLanguages?.geo && showData && <TextShow lang="geo" showData={showData} />}
-          {projectorLanguages?.rus && showData && <TextShow lang="rus" showData={showData} />}
+        <div
+          className={`max-w-[2000px] py-[10px] ${ALIGN_CLASS[align]}`}
+          ref={innerContainerRef}
+          style={{ opacity: visible ? 1 : 0, transition: `opacity ${FADE_MS}ms ease-in-out` }}
+        >
+          {displayed &&
+            order.map(lang =>
+              projectorLanguages?.[lang] ? <TextShow key={lang} lang={lang} showData={displayed} /> : null,
+            )}
         </div>
       </div>
     </div>

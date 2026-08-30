@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 import useBibleContext from '../hooks/useBibleContext';
 import { useQueryClient } from 'react-query';
 import { fetchData } from '../lib/axios';
+import { englishBooks } from '../data/englishBooks';
 
 const bibleSettingContext = createContext();
 
@@ -34,13 +35,14 @@ const BibleSettingProvider = ({ children }) => {
   const onSave = async () => {
     const keyGeo = ['geoData', params.w, inputValues.chapter, versions.geo];
     const keyEng = ['engData', params.w, inputValues.chapter, versions.eng];
-    const keyRus = ['rusData', params.w, inputValues.chapter, versions.eng];
+    const keyRus = ['rusData', params.w, inputValues.chapter, versions.rus];
     const queryDataGeo = queryClient.getQueryData(keyGeo);
     const queryDataEng = queryClient.getQueryData(keyEng);
     const queryDataRus = queryClient.getQueryData(keyRus);
 
-    const startIndex = inputValues.verse - 1;
-    const endIndex = inputValues.versemde || inputValues.verse;
+    const firstVerse = +inputValues.verse || 1;
+    const startIndex = firstVerse - 1;
+    const endIndex = +inputValues.versemde || firstVerse;
 
     const requestManagement = JSON.parse(localStorage.getItem('requestManagement'));
 
@@ -71,29 +73,6 @@ const BibleSettingProvider = ({ children }) => {
       };
     }
 
-    const englishBooks = {
-      48: 62,
-      49: 63,
-      50: 64,
-      51: 65,
-      52: 66,
-      53: 67,
-      54: 68,
-      55: 48,
-      56: 49,
-      57: 50,
-      58: 51,
-      59: 52,
-      60: 53,
-      61: 54,
-      62: 55,
-      63: 56,
-      64: 57,
-      65: 58,
-      66: 59,
-      67: 60,
-      68: 61,
-    };
 
     let englishBook = englishBooks[inputValues.book] || null;
 

@@ -138,7 +138,7 @@ const InputValuesProvider = ({ children }) => {
         }
 
       case 'DECREASE_VERSE':
-        if (state.verse === 1) {
+        if (+state.verse <= 1) {
           return {
             ...state,
           };
@@ -189,13 +189,13 @@ const InputValuesProvider = ({ children }) => {
         };
 
       default:
-        break;
+        return state;
     }
   };
 
   const [inputValues, inputDispatch] = useReducer(bibleDataReducer, inputValueInitial);
   const [filteredData, setfilteredData] = useState(initialState);
-  const queryClient = new useQueryClient();
+  const queryClient = useQueryClient();
 
   const params = {
     w: inputValues.book,

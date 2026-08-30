@@ -12,24 +12,33 @@ const VerseArrows = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const left = () => {
-    inputDispatch({ type: 'DECREASE_VERSE' });
+  const syncVerseInUrl = value => {
     searchParams.delete('verse');
-    searchParams.append('verse', inputValues.verse - 1);
+    searchParams.append('verse', value);
     searchParams.sort();
     setSearchParams(searchParams);
   };
 
-  const right = () => {
-    if (inputValues.verse === verse[verse.length - 1].value) {
+  const left = () => {
+    const current = +inputValues.verse || 1;
+    if (current <= 1) {
       return;
     }
-    searchParams.delete('verse');
-    searchParams.append('verse', inputValues.verse + 1);
-    searchParams.sort();
-    setSearchParams(searchParams);
+
+    inputDispatch({ type: 'DECREASE_VERSE' });
+    syncVerseInUrl(current - 1);
+  };
+
+  const right = () => {
+    const current = +inputValues.verse || 1;
+    const lastVerse = verse?.[verse.length - 1]?.value;
+
+    if (!lastVerse || current >= lastVerse) {
+      return;
+    }
 
     inputDispatch({ type: 'INCREASE_VERSE' });
+    syncVerseInUrl(current + 1);
   };
 
   return (

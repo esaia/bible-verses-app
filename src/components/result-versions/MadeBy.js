@@ -5,7 +5,7 @@ const MadeBy = () => {
     <div>
       <p className="dark:text-white text-center pt-8">
         Made By{' '}
-        <a href="https://www.facebook.com/esaia.gafrindashvili/" className="underline" target="noreferrer">
+        <a href="https://www.facebook.com/esaia.gafrindashvili/" className="underline" target="_blank" rel="noreferrer">
           Esaia
         </a>
       </p>

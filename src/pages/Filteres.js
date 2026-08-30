@@ -7,6 +7,7 @@ import useBibleContext from '../hooks/useBibleContext';
 import Skeleton from '../components/Skeleton';
 import VerseArrows from '../components/VerseArrows';
 import Preview from '../components/Preview';
+import StudioBanner from '../components/StudioBanner';
 
 const Filteres = () => {
   const { filteredData, inputValues, isFetching } = useBibleContext();
@@ -14,6 +15,7 @@ const Filteres = () => {
   return (
     <div className=" w-full min-h-[100vh] flex justify-start items-center flex-col p-4   max-w-[2000px] m-auto ">
       <div className="flex flex-col items-center w-full ">
+        <StudioBanner />
         <Header />
 
         <div className="min-h-[200px] w-full">

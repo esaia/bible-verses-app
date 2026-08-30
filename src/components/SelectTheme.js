@@ -38,7 +38,9 @@ const SelectTheme = () => {
   const [dynamicImage, setDynamicImage] = useState(() => localStorage.getItem('dynamicImage'));
 
   useEffect(() => {
-    localStorage.setItem('themeNumber', themeNumber);
+    if (themeNumber) {
+      localStorage.setItem('themeNumber', themeNumber);
+    }
   }, [themeNumber]);
 
   useEffect(() => {
@@ -86,6 +88,7 @@ const SelectTheme = () => {
         <div className="flex items-center">
           <Radio
             id={'dynamic'}
+            name="theme"
             value={'dynamicIMG'}
             color="blue-gray"
             onChange={e => handleThemeChange(e?.target?.value)}
@@ -104,12 +107,13 @@ const SelectTheme = () => {
               <div className="flex justify-center items-center" key={item.id}>
                 <Radio
                   id={item.id}
-                  value={'dynamicIMG'}
+                  name="font"
+                  value={item.value}
                   color="blue-gray"
-                  onChange={e => handleFont(item.value)}
+                  onChange={() => handleFont(item.value)}
                   checked={item.value === fontTitle}
                 />
-                <label for={item.id} className={`dark:text-white cursor-pointer ${generateFontClassStr(item.title)}`}>
+                <label htmlFor={item.id} className={`dark:text-white cursor-pointer ${generateFontClassStr(item.title)}`}>
                   {item.title}
                 </label>
               </div>
@@ -126,7 +130,14 @@ export default React.memo(SelectTheme);
 const Theme = ({ id, setThemeNumber, checked, src }) => {
   return (
     <div className="flex flex-wrap cursor-pointer">
-      <Radio id={id} value={id} color="blue-gray" onChange={e => setThemeNumber(e.target?.value)} checked={checked} />
+      <Radio
+        id={id}
+        name="theme"
+        value={id}
+        color="blue-gray"
+        onChange={e => setThemeNumber(e.target?.value)}
+        checked={checked}
+      />
       <label htmlFor={id} className="cursor-pointer">
         <img src={src} alt="theme img" className="themeimg rounded-md" />
       </label>
