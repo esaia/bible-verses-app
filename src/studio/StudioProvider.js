@@ -669,6 +669,12 @@ const StudioProvider = ({ children }) => {
     });
   }, []);
 
+  // Which settings panel is open, or null. Setup lives behind this dialog so
+  // the rail beside the passages only carries controls used during a service.
+  const [settingsTab, setSettingsTab] = useState(null);
+  const openSettings = useCallback((panel = 'projector') => setSettingsTab(panel), []);
+  const closeSettings = useCallback(() => setSettingsTab(null), []);
+
   const togglePreview = useCallback(() => setPreviewOpen(current => !current), []);
   const closePreview = useCallback(() => setPreviewOpen(false), []);
 
@@ -834,6 +840,9 @@ const StudioProvider = ({ children }) => {
       clearProjector,
       togglePreview,
       closePreview,
+      settingsTab,
+      openSettings,
+      closeSettings,
       refreshBlocks,
       loadChapterCount,
       loadVerseCount,
@@ -893,6 +902,9 @@ const StudioProvider = ({ children }) => {
       clearProjector,
       togglePreview,
       closePreview,
+      settingsTab,
+      openSettings,
+      closeSettings,
       refreshBlocks,
       loadChapterCount,
       loadVerseCount,

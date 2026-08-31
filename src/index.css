@@ -547,3 +547,41 @@
     0 0,
     8px 8px;
 }
+
+/* ---------------------------------------------------------------------------
+   Miniature of the lower third, used by the style picker in /studio.
+
+   It renders the real `.lower3rd-bar` markup so a look can never drift from
+   its preview; only the two things that are viewport-relative on the live page
+   are overridden — the vh/vw padding, and the font size `fitText` normally
+   sets — so the whole graphic scales down inside a tile.
+   --------------------------------------------------------------------------- */
+
+.l3-preview {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  /* Stands in for the video the overlay composites over. Deliberately carries
+     both a bright and a dark region, so a white plate and a black one are each
+     visibly doing something. */
+  background: linear-gradient(118deg, #46586b 0%, #b9c4cf 46%, #79879a 68%, #2c3540 100%);
+}
+
+.l3-preview .lower3rd-bar {
+  padding: 7% 8% 9%;
+  font-size: 7px;
+}
+
+.l3-preview .lower3rd-bar--top {
+  padding: 9% 8% 7%;
+}
+
+.l3-preview .lower3rd-bar--split {
+  padding: 6% 7% 7%;
+  border-top-width: 1px;
+}
+
+.l3-preview .lower3rd-bar--split.lower3rd-bar--top {
+  padding: 7% 7% 6%;
+  border-bottom-width: 1px;
+}

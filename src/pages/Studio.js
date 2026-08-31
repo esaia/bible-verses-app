@@ -11,6 +11,7 @@ import AudioLibrary from '../studio/components/AudioLibrary';
 import LyricsLibrary from '../studio/components/LyricsLibrary';
 import AudioBar from '../studio/components/AudioBar';
 import Button from '../studio/ui/Button';
+import SettingsModal from '../studio/components/SettingsModal';
 
 const isTyping = target => target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 
@@ -105,6 +106,8 @@ const StudioWorkspace = () => {
       </div>
 
       <PreviewPanel />
+
+      <SettingsModal />
     </div>
   );
 };

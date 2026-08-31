@@ -5,6 +5,7 @@ import {
   HiOutlineBookOpen,
   HiOutlineMusicNote,
   HiOutlineMicrophone,
+  HiOutlineCog,
 } from 'react-icons/hi';
 import Button from '../ui/Button';
 import { useStudio } from '../StudioProvider';
@@ -16,7 +17,7 @@ const TABS = [
 ];
 
 const AppBar = () => {
-  const { previewOpen, togglePreview, clearProjector, tab, setTab } = useStudio();
+  const { previewOpen, togglePreview, clearProjector, tab, setTab, openSettings } = useStudio();
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-studio-border bg-white px-4">
@@ -68,6 +69,18 @@ const AppBar = () => {
         >
           <HiOutlineDesktopComputer className="text-sm" />
           Preview
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openSettings('projector')}
+          title="Settings — background, type, OBS"
+          className="inline-flex h-8 items-center gap-1.5 rounded-studio border border-studio-border bg-white px-3
+            text-xs font-medium text-studio-text transition-colors duration-150 hover:bg-studio-surface
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40"
+        >
+          <HiOutlineCog className="text-sm" />
+          Settings
         </button>
 
         <Link
