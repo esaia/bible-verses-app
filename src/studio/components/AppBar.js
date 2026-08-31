@@ -25,10 +25,10 @@ const AppBar = () => {
         <span className="hidden text-xs text-studio-faint sm:inline">Studio</span>
         <span
           title="Test mode — this console is still being built, so expect the odd bug. Keep the classic view handy."
-          className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px]
-            font-semibold uppercase tracking-wide text-amber-700"
+          className="flex shrink-0 items-center gap-1.5 text-[11px] text-studio-faint"
         >
-          Test mode
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+          test mode
         </span>
       </div>
 
