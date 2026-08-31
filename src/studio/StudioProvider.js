@@ -570,6 +570,12 @@ const StudioProvider = ({ children }) => {
     });
   }, []);
 
+  /** A song written here rather than imported. Lands in the same sorted list. */
+  const addSong = useCallback(song => {
+    setSongs(current => [...current, song].sort((a, b) => a.title.localeCompare(b.title)));
+    setActiveSongId(song.id);
+  }, []);
+
   const removeSong = useCallback(id => {
     setSongs(current => current.filter(song => song.id !== id));
     setSetlist(current => current.filter(songId => songId !== id));
@@ -783,6 +789,7 @@ const StudioProvider = ({ children }) => {
       activeSongId,
       setActiveSongId,
       importSongs,
+      addSong,
       updateSong,
       removeSong,
       clearSongs,
@@ -858,6 +865,7 @@ const StudioProvider = ({ children }) => {
       songs,
       activeSongId,
       importSongs,
+      addSong,
       updateSong,
       removeSong,
       clearSongs,

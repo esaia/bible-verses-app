@@ -1,5 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
-import { HiOutlineDownload, HiOutlinePencil, HiOutlinePlus, HiOutlineTrash, HiOutlineUpload } from 'react-icons/hi';
+import {
+  HiOutlineDocumentAdd,
+  HiOutlineDownload,
+  HiOutlinePencil,
+  HiOutlinePlus,
+  HiOutlineTrash,
+  HiOutlineUpload,
+} from 'react-icons/hi';
 import Button from '../ui/Button';
 import IconButton from '../ui/IconButton';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -27,6 +34,7 @@ const LyricsLibrary = () => {
     activeSongId,
     setActiveSongId,
     importSongs,
+    addSong,
     updateSong,
     removeSong,
     clearSongs,
@@ -50,6 +58,14 @@ const LyricsLibrary = () => {
   const [error, setError] = useState(null);
 
   const active = songs.find(song => song.id === activeSongId) || songs[0] || null;
+
+  /** A blank song, opened in the editor and only added to the library on save. */
+  const writeSong = () =>
+    setEditing({
+      id: `song-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: '',
+      slides: [{ id: `slide-${Date.now()}`, text: '' }],
+    });
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -128,9 +144,25 @@ const LyricsLibrary = () => {
           {busy ? 'Importing…' : 'Import from ProPresenter'}
         </Button>
 
-        <Button variant="secondary" icon={<HiOutlineDownload className="text-sm" />} onClick={loadBuiltIn}>
-          Use the built-in songs
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            className="min-w-0 flex-1"
+            variant="secondary"
+            icon={<HiOutlineDownload className="text-sm" />}
+            onClick={loadBuiltIn}
+          >
+            Built-in songs
+          </Button>
+
+          <Button
+            className="min-w-0 flex-1"
+            variant="secondary"
+            icon={<HiOutlineDocumentAdd className="text-sm" />}
+            onClick={writeSong}
+          >
+            New song
+          </Button>
+        </div>
 
         {songs.length > 0 && <Setlist onEdit={setEditing} />}
 
@@ -235,7 +267,11 @@ const LyricsLibrary = () => {
         />
       </div>
 
-      <SongEditor song={editing} onSave={updateSong} onClose={() => setEditing(null)} />
+      <SongEditor
+        song={editing}
+        onSave={song => (songs.some(item => item.id === song.id) ? updateSong(song) : addSong(song))}
+        onClose={() => setEditing(null)}
+      />
 
       <SlideEditor
         open={editingSlide !== null}
@@ -264,8 +300,9 @@ const LyricsLibrary = () => {
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <p className="text-sm font-medium text-studio-text">No songs yet</p>
             <p className="max-w-sm text-xs text-studio-muted">
-              In ProPresenter, select your playlist and choose File → Export → Bundle, then import the{' '}
-              <code>.proBundle</code> here. Only the lyrics are read — media stays in ProPresenter.
+              Press <strong className="font-semibold text-studio-text">New song</strong> to type one in, or import a
+              ProPresenter bundle — in ProPresenter, select your playlist and choose File → Export → Bundle. Only the
+              lyrics are read; media stays in ProPresenter.
             </p>
           </div>
         ) : (

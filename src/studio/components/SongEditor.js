@@ -68,7 +68,7 @@ const SongEditor = ({ song, onSave, onClose }) => {
   const save = () => {
     const kept = slides.map(slide => ({ ...slide, text: slide.text.trim() })).filter(slide => slide.text.length > 0);
 
-    onSave({ ...song, title: title.trim() || song.title, slides: kept });
+    onSave({ ...song, title: title.trim() || song.title || 'Untitled song', slides: kept });
     onClose();
   };
 
@@ -82,6 +82,7 @@ const SongEditor = ({ song, onSave, onClose }) => {
           type="text"
           value={title}
           aria-label="Song title"
+          placeholder="Song title"
           onChange={e => setTitle(e.target.value)}
           className="w-full rounded-studio border border-studio-border px-3 py-1.5 text-sm font-semibold
             text-studio-text focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40"

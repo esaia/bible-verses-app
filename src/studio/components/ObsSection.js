@@ -32,14 +32,7 @@ const field = `h-8 w-full min-w-0 rounded-studio border border-studio-border px-
  * that outlives any render.
  */
 const ObsSection = () => {
-  const {
-    lowerThirdPosition,
-    setLowerThirdPosition,
-    lowerThirdVariant,
-    setLowerThirdVariant,
-    lyricsVariant,
-    setLyricsVariant,
-  } = useStudio();
+  const { lowerThirdPosition, setLowerThirdPosition } = useStudio();
   const obs = useSyncExternalStore(subscribeObs, getObsState);
 
   const [copied, setCopied] = useState(false);

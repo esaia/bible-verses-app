@@ -29,7 +29,7 @@ const AppBar = () => {
           className="flex shrink-0 items-center gap-1.5 text-[11px] text-studio-faint"
         >
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-          test mode
+          TEST MODE
         </span>
       </div>
 
