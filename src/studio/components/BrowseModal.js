@@ -213,7 +213,7 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
             />
           </div>
 
-          <div className="h-[58vh] overflow-y-auto pr-1">
+          <div className="studio-scroll h-[58vh] overflow-y-auto pr-1">
             {matches.length === 0 ? (
               <p className="pt-10 text-center text-sm text-studio-muted">No book matches "{query}".</p>
             ) : (

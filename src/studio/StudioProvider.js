@@ -79,6 +79,9 @@ const StudioProvider = ({ children }) => {
   const [live, setLive] = useState(() => read('studioLive', null));
   const [previewOpen, setPreviewOpen] = useState(() => read('studioPreviewOpen', false));
 
+  // Which workspace the main pane is showing: the passages, or the music library.
+  const [tab, setTab] = useState(() => (read('studioTab', 'bible') === 'audio' ? 'audio' : 'bible'));
+
   // The projector typeface, shared so the verse cards preview in it too.
   // Stored raw (not JSON) because the legacy console reads the same key.
   const [projectorFont, setProjectorFont] = useState(() => localStorage.getItem('font') || 'font-banner');
@@ -106,6 +109,7 @@ const StudioProvider = ({ children }) => {
   useEffect(() => write('studioBlocks', blocks), [blocks]);
   useEffect(() => write('studioLive', live), [live]);
   useEffect(() => write('studioPreviewOpen', previewOpen), [previewOpen]);
+  useEffect(() => write('studioTab', tab), [tab]);
   useEffect(() => localStorage.setItem('font', projectorFont), [projectorFont]);
   useEffect(() => localStorage.setItem('themeNumber', theme), [theme]);
   useEffect(() => localStorage.setItem('dynamicImage', dynamicImage), [dynamicImage]);
@@ -528,6 +532,8 @@ const StudioProvider = ({ children }) => {
       blocks,
       live,
       previewOpen,
+      tab,
+      setTab,
       projectorFont,
       setProjectorFont,
       theme,
@@ -572,6 +578,7 @@ const StudioProvider = ({ children }) => {
       blocks,
       live,
       previewOpen,
+      tab,
       projectorFont,
       theme,
       dynamicImage,

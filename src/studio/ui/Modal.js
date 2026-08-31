@@ -73,7 +73,7 @@ const Modal = ({ open, onClose, title, children, footer, width = 'max-w-3xl' }) 
           </IconButton>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-2">{children}</div>
+        <div className="studio-scroll flex-1 overflow-y-auto px-5 py-2">{children}</div>
 
         {footer && <div className="flex items-center justify-end gap-2 px-5 py-4">{footer}</div>}
       </div>

@@ -1,10 +1,15 @@
 import { Link } from 'react-router-dom';
-import { HiOutlineExternalLink, HiOutlineDesktopComputer } from 'react-icons/hi';
+import { HiOutlineExternalLink, HiOutlineDesktopComputer, HiOutlineBookOpen, HiOutlineMusicNote } from 'react-icons/hi';
 import Button from '../ui/Button';
 import { useStudio } from '../StudioProvider';
 
+const TABS = [
+  { id: 'bible', label: 'Bible', Icon: HiOutlineBookOpen },
+  { id: 'audio', label: 'Audio', Icon: HiOutlineMusicNote },
+];
+
 const AppBar = () => {
-  const { previewOpen, togglePreview, clearProjector } = useStudio();
+  const { previewOpen, togglePreview, clearProjector, tab, setTab } = useStudio();
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-studio-border bg-white px-4">
@@ -12,6 +17,26 @@ const AppBar = () => {
         <span className="text-sm font-semibold text-studio-text">Bible Presenter</span>
         <span className="hidden text-xs text-studio-faint sm:inline">Studio</span>
       </div>
+
+      <nav
+        aria-label="Workspace"
+        className="flex items-center gap-0.5 rounded-studio border border-studio-border bg-studio-surface p-0.5"
+      >
+        {TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            aria-current={tab === id ? 'page' : undefined}
+            onClick={() => setTab(id)}
+            className={`inline-flex h-7 items-center gap-1.5 rounded-[4px] px-3 text-xs font-medium
+              transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
+              ${tab === id ? 'bg-white text-studio-text shadow-studio' : 'text-studio-muted hover:text-studio-text'}`}
+          >
+            <Icon className="text-sm" />
+            {label}
+          </button>
+        ))}
+      </nav>
 
       <div className="flex items-center gap-2">
         <button

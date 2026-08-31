@@ -23,7 +23,10 @@ const Sidebar = () => {
   const { admin, setAdmin } = useStudio();
 
   return (
-    <aside className="flex h-full w-[264px] shrink-0 flex-col overflow-y-auto border-r border-studio-border bg-white">
+    <aside
+      className="studio-scroll flex h-full w-[264px] shrink-0 flex-col overflow-y-auto border-r
+        border-studio-border bg-white"
+    >
       <Section title="Browsing in" hint="The language and translation printed on the verse cards below.">
         <div className="space-y-2">
           <Select
