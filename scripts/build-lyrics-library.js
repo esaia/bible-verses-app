@@ -17,7 +17,16 @@ const OUT = path.join(ROOT, 'public', 'lyrics', 'library.json');
 
 // ProPresenter files that are not songs: the stock SALT templates every install
 // ships with, and scratch documents.
-const SKIP = [/^Pro6 SALT/i, /^To Delete/i, /^announsment$/i, /^Discerning the Times$/i];
+const SKIP = [
+  /^Pro6 SALT/i,
+  /^To Delete/i,
+  /^announsment$/i,
+  /^Discerning the Times$/i,
+  // Dropped from the shipped library at the church's request.
+  /^Freed from Desire$/i,
+  /^აალელუია( 1)+$/,
+  /^ჰიმნი$/,
+];
 
 const loadParser = () => {
   const source = path.join(ROOT, 'src', 'lib', 'propresenter.js');

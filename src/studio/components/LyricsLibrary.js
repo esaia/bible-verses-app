@@ -146,7 +146,7 @@ const LyricsLibrary = () => {
 
         <div className="flex gap-2">
           <Button
-            className="min-w-0 flex-1"
+            className="min-w-0 flex-1 px-2"
             variant="secondary"
             icon={<HiOutlineDownload className="text-sm" />}
             onClick={loadBuiltIn}
@@ -155,7 +155,7 @@ const LyricsLibrary = () => {
           </Button>
 
           <Button
-            className="min-w-0 flex-1"
+            className="min-w-0 flex-1 px-2"
             variant="secondary"
             icon={<HiOutlineDocumentAdd className="text-sm" />}
             onClick={writeSong}

@@ -199,7 +199,10 @@
     @apply bg-no-repeat bg-center bg-cover;
   }
   .showText {
-    @apply text-white  py-2 px-16;
+    /* Without this the block inherits the 1.5 the browser sets, which at
+       projector size opens a gap wider than the caps are tall. Tighter lines
+       also let `fitText` spend the reclaimed height on a larger font. */
+    @apply text-white leading-[1.2] py-2 px-16;
   }
   .tavimuxli {
     @apply text-white font-bold px-16 text-4xl mt-3;

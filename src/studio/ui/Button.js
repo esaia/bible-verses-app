@@ -19,6 +19,7 @@ const Button = ({ variant = 'secondary', size = 'sm', icon, className = '', chil
       type="button"
       className={`inline-flex items-center justify-center rounded-studio font-medium tracking-tight
         transition-colors duration-150 select-none whitespace-nowrap
+        [&_svg]:shrink-0
         focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
         disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
       {...rest}
