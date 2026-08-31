@@ -24,7 +24,7 @@ const ExtendTile = ({ label, icon, onClick }) => (
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex aspect-[4/3] w-full items-center justify-center rounded-[4px] border border-dashed
+      className="flex aspect-video w-full items-center justify-center rounded-[4px] border border-dashed
         border-studio-border text-studio-faint transition-colors duration-150
         hover:border-studio-accent hover:bg-studio-surface hover:text-studio-accent
         focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40"

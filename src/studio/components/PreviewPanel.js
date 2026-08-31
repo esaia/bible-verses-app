@@ -48,8 +48,23 @@ const defaultGeometry = () => {
  * grip; position, size and open state all persist.
  */
 const PreviewPanel = () => {
-  const { blocks, live, enabled, previewOpen, closePreview, projectorFont, theme, dynamicImage, textAlign, langOrder } =
-    useStudio();
+  const {
+    blocks,
+    live,
+    enabled,
+    previewOpen,
+    closePreview,
+    projectorFont,
+    theme,
+    dynamicImage,
+    textAlign,
+    langOrder,
+    transitionMs,
+  } = useStudio();
+
+  // The panel runs the projector's own crossfade, at the operator's setting, so
+  // the preview lies about nothing — timing included.
+  const fadeMs = transitionMs / 2;
 
   const screenRef = useRef(null);
   const textRef = useRef(null);
@@ -57,6 +72,26 @@ const PreviewPanel = () => {
   const [geometry, setGeometry] = useState(readGeometry);
   const [collapsed, setCollapsed] = useState(false);
   const [interaction, setInteraction] = useState(null);
+
+  // What is live right now. The fade is keyed on the text itself rather than on
+  // the `live` pointer, because editing a passage — adding a verse at the
+  // start, say — shifts the pointer without changing the verse on screen, and
+  // that must not look like a slide change.
+  const liveBlock = blocks.find(item => item.id === live?.blockId);
+  const liveGroup = liveBlock?.groups?.[live?.verseIndex];
+  const liveRows = langOrder
+    .filter(lang => enabled[lang])
+    .map(lang => ({
+      lang,
+      items: liveBlock && liveGroup ? groupVerses(liveBlock, lang, liveGroup) : [],
+    }));
+  const signature = JSON.stringify(liveRows.map(row => [row.lang, row.items.map(item => item.bv)]));
+
+  // What the panel is showing right now, which lags the live text by one fade.
+  // Swapping only while the text is invisible means the refit measures the
+  // incoming verse and the operator never sees a hard cut.
+  const [displayed, setDisplayed] = useState({ rows: liveRows, signature });
+  const [visible, setVisible] = useState(true);
 
   // Placed on first open so it lands in the corner of the current window.
   useEffect(() => {
@@ -149,6 +184,30 @@ const PreviewPanel = () => {
     [geometry],
   );
 
+  useEffect(() => {
+    if (signature === displayed.signature) {
+      setVisible(true);
+      return undefined;
+    }
+
+    if (fadeMs === 0) {
+      setDisplayed({ rows: liveRows, signature });
+      setVisible(true);
+      return undefined;
+    }
+
+    setVisible(false);
+
+    const swap = setTimeout(() => {
+      setDisplayed({ rows: liveRows, signature });
+      setVisible(true);
+    }, fadeMs);
+
+    return () => clearTimeout(swap);
+    // `liveRows` is rebuilt every render; `signature` is what actually changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, displayed.signature, fadeMs]);
+
   // Same fit as the projector, scaled to the panel — so the preview shows what
   // will actually be on screen, and never needs a scrollbar.
   useEffect(() => {
@@ -169,15 +228,7 @@ const PreviewPanel = () => {
     };
   });
 
-  const block = blocks.find(item => item.id === live?.blockId);
-  const group = block?.groups?.[live?.verseIndex];
-  const rows = langOrder
-    .filter(lang => enabled[lang])
-    .map(lang => ({
-      lang,
-      items: block && group ? groupVerses(block, lang, group) : [],
-    }));
-
+  const rows = displayed.rows;
   const hasContent = rows.some(row => row.items.length > 0);
 
   if (!previewOpen || !geometry) {
@@ -232,7 +283,13 @@ const PreviewPanel = () => {
               ${theme === 'dynamicIMG' ? '' : `bg-${theme}img`}`}
             style={theme === 'dynamicIMG' && dynamicImage ? { backgroundImage: `url(${dynamicImage})` } : undefined}
           >
-            <div className="flex h-full w-full items-center justify-center px-[6%]">
+            <div
+              className="flex h-full w-full items-center justify-center px-[6%]"
+              style={{
+                opacity: visible ? 1 : 0,
+                transition: fadeMs === 0 ? 'none' : `opacity ${fadeMs}ms ease-in-out`,
+              }}
+            >
               {!hasContent ? (
                 <p className="text-xs text-white/40">Nothing is live</p>
               ) : (

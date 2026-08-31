@@ -2,6 +2,7 @@ import { MdFormatAlignCenter, MdFormatAlignLeft, MdFormatAlignRight } from 'reac
 import Select from '../ui/Select';
 import { useStudio } from '../StudioProvider';
 import { THEMES } from '../../data/themes';
+import { MAX_TRANSITION_MS, MIN_TRANSITION_MS } from '../../lib/transition';
 
 const ALIGNMENTS = [
   { value: 'left', label: 'Align left', Icon: MdFormatAlignLeft },
@@ -24,8 +25,18 @@ const FONTS = [
  * has always read, so backgrounds set here work on `/show` unchanged.
  */
 const StyleSection = () => {
-  const { projectorFont, setProjectorFont, theme, setTheme, dynamicImage, setDynamicImage, textAlign, setTextAlign } =
-    useStudio();
+  const {
+    projectorFont,
+    setProjectorFont,
+    theme,
+    setTheme,
+    dynamicImage,
+    setDynamicImage,
+    textAlign,
+    setTextAlign,
+    transitionMs,
+    setTransitionMs,
+  } = useStudio();
 
   return (
     <div className="space-y-3">
@@ -100,6 +111,25 @@ const StyleSection = () => {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-[11px] text-studio-faint">Transition</span>
+
+        <input
+          type="range"
+          min={MIN_TRANSITION_MS}
+          max={MAX_TRANSITION_MS}
+          step={10}
+          value={transitionMs}
+          aria-label="Slide transition duration in milliseconds"
+          onChange={e => setTransitionMs(e.target.value)}
+          className="studio-range h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-studio-border"
+        />
+
+        <span className="w-12 shrink-0 text-right text-[11px] tabular-nums text-studio-muted">
+          {transitionMs === 0 ? 'Off' : `${transitionMs}ms`}
+        </span>
       </div>
     </div>
   );

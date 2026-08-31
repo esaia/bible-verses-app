@@ -76,7 +76,7 @@ const VerseCard = ({ items, lang, isLive, font, align = 'left', size = 190, onGo
         type="button"
         onClick={onGoLive}
         title={isLive ? 'Click again to clear the screen' : text}
-        className={`flex aspect-[4/3] w-full flex-col justify-between rounded-[4px] bg-studio-slide p-2
+        className={`flex aspect-video w-full flex-col justify-between rounded-[4px] bg-studio-slide p-2
           text-left transition-shadow duration-150 focus:outline-none ${font}
           ${
             isLive

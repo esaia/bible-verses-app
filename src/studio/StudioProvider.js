@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { versionsByLang } from '../data/bible';
 import useChapter, { LANGS } from './useChapter';
+import { TRANSITION_KEY, clampTransition, readTransition } from '../lib/transition';
 
 const StudioContext = createContext(null);
 
@@ -85,6 +86,11 @@ const StudioProvider = ({ children }) => {
   const [dynamicImage, setDynamicImage] = useState(() => localStorage.getItem('dynamicImage') || '');
   const [textAlign, setTextAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
 
+  // Slide-change crossfade in milliseconds, 0 for a hard cut. Stored raw so
+  // `/show` reads it with a plain getItem.
+  const [transitionMs, setTransitionMsState] = useState(readTransition);
+  const setTransitionMs = useCallback(value => setTransitionMsState(clampTransition(Number(value) || 0)), []);
+
   // Which language sits above which on screen.
   const [langOrder, setLangOrder] = useState(() => {
     const stored = read('projectorOrder', null);
@@ -104,6 +110,7 @@ const StudioProvider = ({ children }) => {
   useEffect(() => localStorage.setItem('themeNumber', theme), [theme]);
   useEffect(() => localStorage.setItem('dynamicImage', dynamicImage), [dynamicImage]);
   useEffect(() => localStorage.setItem('projectorAlign', textAlign), [textAlign]);
+  useEffect(() => localStorage.setItem(TRANSITION_KEY, String(transitionMs)), [transitionMs]);
   useEffect(() => write('projectorOrder', langOrder), [langOrder]);
   useEffect(() => write('studioCardSize', cardSize), [cardSize]);
 
@@ -529,6 +536,8 @@ const StudioProvider = ({ children }) => {
       setDynamicImage,
       textAlign,
       setTextAlign,
+      transitionMs,
+      setTransitionMs,
       langOrder,
       moveLang,
       cardSize,
@@ -567,6 +576,8 @@ const StudioProvider = ({ children }) => {
       theme,
       dynamicImage,
       textAlign,
+      transitionMs,
+      setTransitionMs,
       langOrder,
       moveLang,
       cardSize,

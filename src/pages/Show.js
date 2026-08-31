@@ -3,6 +3,7 @@ import { SlSizeFullscreen } from 'react-icons/sl';
 import TextShow from '../components/result-versions/TextShow';
 import { fitText, refitOnFontLoad } from '../lib/fitText';
 import { themeClassName } from '../data/themes';
+import { readTransition } from '../lib/transition';
 
 const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
@@ -20,7 +21,6 @@ const readOrder = () => {
   }
 };
 
-const FADE_MS = 320;
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 64;
 const VERTICAL_MARGIN = 120;
@@ -35,6 +35,7 @@ const Show = () => {
   const [font, setFont] = useState(localStorage.getItem('font') || 'font-banner');
   const [align, setAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
   const [order, setOrder] = useState(readOrder);
+  const [transitionMs, setTransitionMs] = useState(readTransition);
   const [projectorLanguages, setProjectorLanguages] = useState(
     JSON.parse(localStorage.getItem('projectorLanguages')) || {
       geo: false,
@@ -80,6 +81,7 @@ const Show = () => {
       setFont(localStorage.getItem('font') || 'font-banner');
       setAlign(localStorage.getItem('projectorAlign') || 'left');
       setOrder(readOrder());
+      setTransitionMs(readTransition());
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -111,15 +113,23 @@ const Show = () => {
       return undefined;
     }
 
+    // A zero-length transition is a hard cut: swap in the same tick so the
+    // screen never blanks, however briefly.
+    if (transitionMs === 0) {
+      setDisplayed(showData);
+      setVisible(true);
+      return undefined;
+    }
+
     setVisible(false);
 
     const swap = setTimeout(() => {
       setDisplayed(showData);
       setVisible(true);
-    }, FADE_MS);
+    }, transitionMs / 2);
 
     return () => clearTimeout(swap);
-  }, [showData, displayed]);
+  }, [showData, displayed, transitionMs]);
 
   useEffect(() => {
     resizeText();
@@ -164,7 +174,10 @@ const Show = () => {
         <div
           className={`max-w-[2000px] py-[10px] ${ALIGN_CLASS[align]}`}
           ref={innerContainerRef}
-          style={{ opacity: visible ? 1 : 0, transition: `opacity ${FADE_MS}ms ease-in-out` }}
+          style={{
+            opacity: visible ? 1 : 0,
+            transition: transitionMs === 0 ? 'none' : `opacity ${transitionMs / 2}ms ease-in-out`,
+          }}
         >
           {displayed &&
             order.map(lang =>
