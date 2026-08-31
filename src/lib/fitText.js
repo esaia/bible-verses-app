@@ -8,7 +8,7 @@
  * opportunity, so past a certain size it runs off the screen edges while the
  * block is still short enough to pass the height test.
  */
-export const fitText = (element, available, { min = 8, max = 64 } = {}) => {
+export const fitText = (element, available, { min = 8, max = 64, constrain } = {}) => {
   if (!element || available <= 0) {
     return;
   }
@@ -17,7 +17,13 @@ export const fitText = (element, available, { min = 8, max = 64 } = {}) => {
   // monotonically with font size, and every probe forces a layout, so this
   // turns ~50 reflows into ~6. That matters when dozens of verse cards refit
   // at once while the size slider moves.
-  const fits = () => element.offsetHeight <= available && element.scrollWidth <= element.clientWidth;
+  // `constrain` lets a caller add its own test to the search — the lower third
+  // uses it to cap each verse at two lines, which the height test alone cannot
+  // express because the block's height depends on how many languages are up.
+  const fits = () =>
+    element.offsetHeight <= available &&
+    element.scrollWidth <= element.clientWidth &&
+    (!constrain || constrain(element));
 
   element.style.fontSize = `${max}px`;
 

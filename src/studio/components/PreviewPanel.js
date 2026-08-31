@@ -11,6 +11,16 @@ const MIN_WIDTH = 260;
 const HEADER_HEIGHT = 36;
 const ASPECT = 16 / 9;
 const GEOMETRY_KEY = 'studioPreviewGeometry';
+const MODE_KEY = 'studioPreviewMode';
+
+/** The frame the lower third is authored against; the iframe is scaled from it. */
+const STREAM_W = 1920;
+const STREAM_H = 1080;
+
+const MODES = [
+  { value: 'projector', label: 'Projector' },
+  { value: 'stream', label: 'Lower third' },
+];
 
 /** The body is locked to the projector's 16:9 so the preview never lies about framing. */
 const heightFor = width => Math.round(width / ASPECT) + HEADER_HEIGHT;
@@ -74,6 +84,7 @@ const PreviewPanel = () => {
 
   const [geometry, setGeometry] = useState(readGeometry);
   const [collapsed, setCollapsed] = useState(false);
+  const [mode, setMode] = useState(() => localStorage.getItem(MODE_KEY) || 'projector');
   const [interaction, setInteraction] = useState(null);
 
   // What is live right now. The fade is keyed on the text itself rather than on
@@ -105,6 +116,10 @@ const PreviewPanel = () => {
       setGeometry(defaultGeometry());
     }
   }, [previewOpen, geometry]);
+
+  useEffect(() => {
+    localStorage.setItem(MODE_KEY, mode);
+  }, [mode]);
 
   useEffect(() => {
     if (geometry) {
@@ -269,7 +284,21 @@ const PreviewPanel = () => {
           interaction === 'drag' ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
-        <span className="text-xs font-medium text-white/80">Preview</span>
+        <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
+          {MODES.map(item => (
+            <button
+              key={item.value}
+              type="button"
+              aria-pressed={mode === item.value}
+              onClick={() => setMode(item.value)}
+              className={`rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium transition-colors duration-150
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
+                ${mode === item.value ? 'bg-white/20 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
 
         <div className="flex items-center gap-1.5" onMouseDown={e => e.stopPropagation()}>
           <span className="flex items-center gap-1.5 pr-1 text-[10px] font-semibold tracking-wide text-white/80">
@@ -293,50 +322,75 @@ const PreviewPanel = () => {
 
       {!collapsed && (
         <>
-          <div
-            ref={screenRef}
-            className={`relative flex-1 overflow-hidden bg-blend-overlay bgblind showbackground
-              ${theme === 'dynamicIMG' ? '' : `bg-${theme}img`}`}
-            style={theme === 'dynamicIMG' && dynamicImage ? { backgroundImage: `url(${dynamicImage})` } : undefined}
-          >
-            <div
-              className="flex h-full w-full items-center justify-center px-[6%]"
-              style={{
-                opacity: visible ? 1 : 0,
-                transition: fadeMs === 0 ? 'none' : `opacity ${fadeMs}ms ease-in-out`,
-              }}
-            >
-              {!hasContent ? (
-                <p className="text-xs text-white/40">Nothing is live</p>
-              ) : displayed.lyrics ? (
-                <div ref={textRef} className={`w-full ${lyricsFont}`}>
-                  <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[lyricsAlign]}`}>
-                    {displayed.lyrics.split('\n').join(' ')}
-                  </p>
-                </div>
-              ) : (
-                <div ref={textRef} className={`w-full ${projectorFont}`}>
-                  {rows.map(({ lang, items }) =>
-                    items.length > 0 ? (
-                      <div key={lang} className="py-[0.35em]">
-                        <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[textAlign]}`}>
-                          {items.map(item => plain(item.bv)).join(' ')}
-                        </p>
-                        <p
-                          className={`italic text-gray-300/90 ${ALIGN_CLASS[textAlign]}`}
-                          style={{ fontSize: '0.72em' }}
-                        >
-                          {items.length > 1
-                            ? `${verseRef(items[0], lang)}-${items[items.length - 1].muxli}`
-                            : verseRef(items[0], lang)}
-                        </p>
-                      </div>
-                    ) : null,
-                  )}
-                </div>
-              )}
+          {mode === 'stream' ? (
+            // The real `/lower3rd` page, scaled down, rather than a second
+            // rendering of the same design: same origin means it picks the
+            // slide up through the `storage` event, and its `vh`/`vw` padding
+            // resolves against its own 1920x1080 viewport, so what shows here
+            // is what OBS draws. The chequerboard stands in for the camera and
+            // reads as transparency.
+            <div ref={screenRef} className="preview-alpha relative flex-1 overflow-hidden">
+              <iframe
+                title="Lower third preview"
+                src="/lower3rd"
+                tabIndex={-1}
+                scrolling="no"
+                style={{
+                  width: STREAM_W,
+                  height: STREAM_H,
+                  border: 0,
+                  transform: `scale(${geometry.width / STREAM_W})`,
+                  transformOrigin: 'top left',
+                  pointerEvents: 'none',
+                }}
+              />
             </div>
-          </div>
+          ) : (
+            <div
+              ref={screenRef}
+              className={`relative flex-1 overflow-hidden bg-blend-overlay bgblind showbackground
+              ${theme === 'dynamicIMG' ? '' : `bg-${theme}img`}`}
+              style={theme === 'dynamicIMG' && dynamicImage ? { backgroundImage: `url(${dynamicImage})` } : undefined}
+            >
+              <div
+                className="flex h-full w-full items-center justify-center px-[6%]"
+                style={{
+                  opacity: visible ? 1 : 0,
+                  transition: fadeMs === 0 ? 'none' : `opacity ${fadeMs}ms ease-in-out`,
+                }}
+              >
+                {!hasContent ? (
+                  <p className="text-xs text-white/40">Nothing is live</p>
+                ) : displayed.lyrics ? (
+                  <div ref={textRef} className={`w-full ${lyricsFont}`}>
+                    <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[lyricsAlign]}`}>
+                      {displayed.lyrics.split('\n').join(' ')}
+                    </p>
+                  </div>
+                ) : (
+                  <div ref={textRef} className={`w-full ${projectorFont}`}>
+                    {rows.map(({ lang, items }) =>
+                      items.length > 0 ? (
+                        <div key={lang} className="py-[0.35em]">
+                          <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[textAlign]}`}>
+                            {items.map(item => plain(item.bv)).join(' ')}
+                          </p>
+                          <p
+                            className={`italic text-gray-300/90 ${ALIGN_CLASS[textAlign]}`}
+                            style={{ fontSize: '0.72em' }}
+                          >
+                            {items.length > 1
+                              ? `${verseRef(items[0], lang)}-${items[items.length - 1].muxli}`
+                              : verseRef(items[0], lang)}
+                          </p>
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div
             role="separator"

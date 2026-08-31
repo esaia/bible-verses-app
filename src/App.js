@@ -7,6 +7,7 @@ import useData from './hooks/useData';
 import Donate from './pages/Donate';
 import Bible from './pages/Bible';
 import Studio from './pages/Studio';
+import Lower3rd from './pages/Lower3rd';
 
 function App() {
   const { darkMode } = useBibleSettingContext();
@@ -23,6 +24,7 @@ function App() {
             <Route path="/donation" element={<Donate />} />
             <Route path="/bible" element={<Bible />} />
             <Route path="/studio" element={<Studio />} />
+            <Route path="/lower3rd" element={<Lower3rd />} />
           </Routes>
         </div>
       </div>

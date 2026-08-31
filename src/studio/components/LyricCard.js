@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
+import { HiOutlinePencil } from 'react-icons/hi';
+import IconButton from '../ui/IconButton';
 import { fitText } from '../../lib/fitText';
 
 const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
@@ -6,7 +8,7 @@ const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-rig
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 /** One song slide, framed and scaled exactly like a verse card. */
-const LyricCard = ({ slide, index, isLive, font, align = 'center', size = 190, onGoLive }) => {
+const LyricCard = ({ slide, index, isLive, font, align = 'center', size = 190, onGoLive, onEdit }) => {
   const bodyRef = useRef(null);
   const textRef = useRef(null);
 
@@ -21,10 +23,21 @@ const LyricCard = ({ slide, index, isLive, font, align = 'center', size = 190, o
 
   return (
     <div>
-      <div className="mb-1 flex h-[18px] items-center px-0.5">
+      <div className="group mb-1 flex h-[18px] items-center justify-between px-0.5">
         <span className={`text-xs font-semibold ${isLive ? 'text-studio-live' : 'text-studio-muted'}`}>
           {index + 1}
         </span>
+
+        {onEdit && (
+          <IconButton
+            label={`Edit slide ${index + 1}`}
+            onClick={onEdit}
+            className="h-[18px] w-[18px] text-studio-faint opacity-0 transition-opacity
+              group-hover:opacity-100 focus-visible:opacity-100"
+          >
+            <HiOutlinePencil className="text-[11px]" />
+          </IconButton>
+        )}
       </div>
 
       <button

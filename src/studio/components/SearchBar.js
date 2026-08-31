@@ -1,17 +1,27 @@
 import { useState } from 'react';
-import { HiOutlineSearch, HiOutlineMenuAlt2, HiPlus } from 'react-icons/hi';
+import {
+  HiOutlineSearch,
+  HiOutlineMenuAlt2,
+  HiPlus,
+  HiOutlineChevronDoubleDown,
+  HiOutlineChevronDoubleUp,
+} from 'react-icons/hi';
 import Button from '../ui/Button';
 import BrowseModal from './BrowseModal';
 import { useStudio } from '../StudioProvider';
 import { findBook, parseReference } from '../../lib/passage';
 
 const SearchBar = () => {
-  const { admin, addPassage, loading } = useStudio();
+  const { admin, addPassage, loading, blocks, setAllCollapsed } = useStudio();
 
   const [query, setQuery] = useState('');
   const [hint, setHint] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const [jumpToBook, setJumpToBook] = useState(null);
+
+  // One button for both directions: while anything is still open it folds
+  // everything, and only offers to unfold once the list is fully collapsed.
+  const allCollapsed = blocks.length > 0 && blocks.every(block => block.collapsed);
 
   const submit = async e => {
     e.preventDefault();
@@ -83,6 +93,23 @@ const SearchBar = () => {
           >
             Browse
           </Button>
+
+          {blocks.length > 0 && (
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setAllCollapsed(!allCollapsed)}
+              icon={
+                allCollapsed ? (
+                  <HiOutlineChevronDoubleDown className="text-sm" />
+                ) : (
+                  <HiOutlineChevronDoubleUp className="text-sm" />
+                )
+              }
+            >
+              {allCollapsed ? 'Expand all' : 'Collapse all'}
+            </Button>
+          )}
         </form>
 
         {hint && <p className="mt-2 text-xs text-studio-danger">{hint}</p>}

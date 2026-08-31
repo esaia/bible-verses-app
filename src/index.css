@@ -242,3 +242,308 @@
 .my-react-select-container .my-react-select__option:is(.dark *) {
   /* @apply dark:bg-[#2256ab]; */
 }
+
+/* ---------------------------------------------------------------------------
+   /lower3rd — the OBS Browser Source output.
+
+   Everything here composites over live video, so the stage stays transparent
+   and the bar carries its own scrim. Sizes are in `em` so the fit-to-width
+   pass in `fitText` scales the whole block by setting one font size.
+   --------------------------------------------------------------------------- */
+
+.lower3rd-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.lower3rd-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3.5vh 6vw 5vh;
+
+  /* Per-variant knobs. Each look below re-points these rather than restating
+     the layout, so position (top/bottom) and appearance stay independent. */
+  --l3-fg: #ffffff;
+  --l3-ref: rgba(255, 255, 255, 0.72);
+  --l3-dir: to top;
+  --l3-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+
+  /* Fading the scrim out rather than ending it on a hard edge keeps the bar
+     from cutting a visible line across the shot. */
+  background: linear-gradient(var(--l3-dir), rgba(6, 8, 12, 0.9) 0%, rgba(6, 8, 12, 0.74) 58%, rgba(6, 8, 12, 0) 100%);
+}
+
+.lower3rd-bar--top {
+  top: 0;
+  bottom: auto;
+  padding: 5vh 6vw 3.5vh;
+  --l3-dir: to bottom;
+}
+
+/* Solid slab — reads harder than the scrim over a busy or bright shot. */
+.lower3rd-bar--solid {
+  background: rgba(8, 10, 14, 0.88);
+}
+
+/* No plate at all: text straight on the video, carried by its shadow. Needs a
+   reasonably calm background to stay legible. */
+.lower3rd-bar--plain {
+  background: none;
+  --l3-shadow: 0 2px 14px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Broadcast bands: each line of text sits on its own plate, centred, with the
+   bar itself carrying nothing — the plates are the graphic. Two colourways
+   share all the mechanics and differ only in the plate and ink. */
+.lower3rd-bar--bands,
+.lower3rd-bar--bandsdark {
+  background: none;
+  --l3-shadow: none;
+}
+
+.lower3rd-bar--bands {
+  --l3-fg: #14171c;
+  --l3-ref: rgba(20, 23, 28, 0.6);
+  --l3-plate: rgba(255, 255, 255, 0.93);
+}
+
+.lower3rd-bar--bandsdark {
+  --l3-fg: #ffffff;
+  --l3-ref: rgba(255, 255, 255, 0.7);
+  --l3-plate: rgba(10, 12, 16, 0.86);
+}
+
+/* The plate rides on the text itself, not the block, with the decoration
+   cloned across line boxes — so a verse that wraps gets one plate per line
+   that hugs the words, the way a broadcast subtitle does, instead of a single
+   full-width slab. */
+.lower3rd-bar--bands .lower3rd-text,
+.lower3rd-bar--bands .lower3rd-ref,
+.lower3rd-bar--bandsdark .lower3rd-text,
+.lower3rd-bar--bandsdark .lower3rd-ref {
+  display: inline;
+  background: var(--l3-plate);
+  padding: 0.1em 0.45em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* The plate's height comes from the font's em box plus its padding, not from
+   line-height, so line-height alone sets the gap between stacked plates: it
+   wants to clear roughly 1.35em of plate and no more, or the lines drift apart
+   and stop reading as one block. */
+.lower3rd-bar--bands .lower3rd-text,
+.lower3rd-bar--bandsdark .lower3rd-text {
+  line-height: 1.5;
+}
+
+.lower3rd-bar--bands .lower3rd-ref,
+.lower3rd-bar--bandsdark .lower3rd-ref {
+  line-height: 1.8;
+}
+
+.lower3rd-refline {
+  margin-top: 0.08em;
+}
+
+/* Reference card: the verse on a filled slab with its reference on a chip
+   riding above it, the way a broadcast scripture graphic is usually set. The
+   block is reversed rather than reordered in markup, so every other look keeps
+   the reading order reference-after-verse. */
+.lower3rd-bar--card {
+  background: none;
+  --l3-fg: #ffffff;
+  --l3-ref: #ffffff;
+  --l3-shadow: none;
+  --l3-plate: rgba(45, 85, 71, 0.93);
+  --l3-chip: rgba(10, 12, 16, 0.95);
+}
+
+.lower3rd-bar--card .lower3rd-block {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 0.32em;
+}
+
+.lower3rd-bar--card.text-center .lower3rd-block {
+  align-items: center;
+}
+
+.lower3rd-bar--card.text-right .lower3rd-block {
+  align-items: flex-end;
+}
+
+.lower3rd-bar--card .lower3rd-text {
+  width: 100%;
+  background: var(--l3-plate);
+  padding: 0.5em 0.7em;
+  line-height: 1.34;
+}
+
+.lower3rd-bar--card .lower3rd-refline {
+  margin-top: 0;
+}
+
+.lower3rd-bar--card .lower3rd-ref {
+  margin-top: 0;
+  padding: 0.26em 0.7em;
+  background: var(--l3-chip);
+  font-size: 0.42em;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lower3rd-bar--card .lower3rd-block + .lower3rd-block {
+  margin-top: 0.5em;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Split bar: a full-width slab with the reference standing in its own column,
+   ruled off from the verse — the arrangement broadcast scripture graphics use,
+   where the numbers are meant to be read from across a room. */
+.lower3rd-bar--split {
+  background: rgba(18, 20, 24, 0.93);
+  border-top: 2px solid rgba(198, 94, 43, 0.9);
+  padding: 2.6vh 5vw 3vh;
+  --l3-fg: #ffffff;
+  --l3-ref: #ffffff;
+  --l3-shadow: none;
+}
+
+/* The accent rule always faces the picture, so it swaps edges with the bar. */
+.lower3rd-bar--split.lower3rd-bar--top {
+  border-top: none;
+  border-bottom: 2px solid rgba(198, 94, 43, 0.9);
+  padding: 3vh 5vw 2.6vh;
+}
+
+/* Reversed so the reference — second in the markup, for reading order — sits
+   to the left of the verse. */
+.lower3rd-bar--split .lower3rd-block {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 0.85em;
+  text-align: left;
+}
+
+.lower3rd-bar--split .lower3rd-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.34;
+}
+
+.lower3rd-bar--split .lower3rd-refline {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding-right: 0.85em;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  align-self: stretch;
+}
+
+.lower3rd-bar--split .lower3rd-ref {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-top: 0;
+  font-size: 1em;
+  font-style: normal;
+  letter-spacing: normal;
+  color: var(--l3-fg);
+}
+
+.lower3rd-bar--split .lower3rd-ref-num {
+  order: 1;
+  font-size: 1.02em;
+  font-weight: 700;
+  line-height: 1.12;
+  white-space: nowrap;
+}
+
+.lower3rd-bar--split .lower3rd-ref-book {
+  order: 2;
+  font-size: 0.46em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.lower3rd-bar--split .lower3rd-block + .lower3rd-block {
+  margin-top: 0.6em;
+  padding-top: 0;
+  border-top: none;
+}
+
+.lower3rd-block + .lower3rd-block {
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+/* The plates are already separated by their own edges, so the rule that
+   divides stacked languages would only add noise. */
+.lower3rd-bar--bands .lower3rd-block + .lower3rd-block,
+.lower3rd-bar--bandsdark .lower3rd-block + .lower3rd-block {
+  margin-top: 0.28em;
+  padding-top: 0.34em;
+  border-top: none;
+}
+
+.lower3rd-text {
+  color: var(--l3-fg);
+  line-height: 1.28;
+  /* Video behind the bar can be any brightness; the shadow keeps the text
+     legible over a blown-out window or a white shirt. */
+  text-shadow: var(--l3-shadow);
+}
+
+.lower3rd-ref {
+  display: inline-block;
+  margin-top: 0.3em;
+  font-size: 0.62em;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--l3-ref);
+  text-shadow: var(--l3-shadow);
+}
+
+/* Diagnostic panel for `/lower3rd?debug=1`. Deliberately opaque: its whole job
+   is to be visible when the rest of the page is correctly invisible. */
+.lower3rd-debug {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  max-width: 520px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: rgba(10, 12, 18, 0.88);
+  color: #d6f5c8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Stands in for the camera behind the lower-third preview: a chequerboard is
+   the conventional "nothing here" ground, so the operator reads the bar as an
+   overlay rather than as the whole picture. */
+.preview-alpha {
+  background-color: #2f333a;
+  background-image:
+    linear-gradient(45deg, #3a3f47 25%, transparent 25%, transparent 75%, #3a3f47 75%),
+    linear-gradient(45deg, #3a3f47 25%, transparent 25%, transparent 75%, #3a3f47 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    8px 8px;
+}

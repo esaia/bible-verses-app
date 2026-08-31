@@ -53,6 +53,7 @@ Caveat baked into `BibleSettingProvider.onSave`: the English API uses a **differ
 | `/bible`    | `pages/Bible.js`     | plain reading view, whole chapter                     |
 | `/doc`      | `pages/Documentation.js` | usage docs (GeoDoc / EngDoc)                      |
 | `/donation` | `pages/Donate.js`    | donation info                                         |
+| `/lower3rd` | `pages/Lower3rd.js`  | OBS Browser Source output — transparent lower third   |
 
 ## State
 
@@ -76,6 +77,12 @@ Three layers, all global:
 | `dynamicImage`      | `SelectTheme`                     | `/show` (custom bg URL)        |
 | `font`              | `SelectTheme`                     | app + `/show`                  |
 | `darkmode`          | `DarkModeSwitcher`                | `App`                          |
+| `obsBridge`         | `ObsSection` (via `lib/obsBridge`)| `lib/obsBridge` (enabled/url/password) |
+| `lowerThirdPosition`| `StudioProvider`                  | `/lower3rd` (top or bottom)    |
+| `lowerThirdVariant` | `StudioProvider`                  | `/lower3rd` verse look         |
+| `lyricsVariant`     | `StudioProvider`                  | `/lower3rd` lyric look         |
+| `lowerThirdLanguage` | `StudioProvider`                 | the single language shown on the stream |
+| `obsHidden`         | `StudioProvider`                  | blanks the overlay, keeps the connection |
 
 **"Request management" vs "projector languages" are two different things** and users confuse them: green checkboxes (`requestManagement`) control which of the 3 API requests are actually sent; blue checkboxes (`projectorLanguages`) control which languages are shown on the projector.
 
@@ -95,6 +102,37 @@ Three layers, all global:
 - No tests, no error boundary, no loading state on the projector view.
 - `node-sass` and `react-awesome-button` are legacy deps; `module.scss` is only button theming.
 - Deployed as a static SPA with `public/_redirects` (`/* /index.html 200`) — Netlify-style hosting.
+
+## OBS lower third (`/lower3rd`)
+
+**`localStorage` does not reach OBS.** Its Browser Source is a separate CEF
+process with its own storage, so the projector transport cannot be reused. The
+slide travels through OBS itself: the console opens an obs-websocket connection
+and calls the `obs-browser` vendor's `emit_event`, which fires a `CustomEvent`
+into the running Browser Source.
+
+Three things about this are easy to break:
+
+- **The payload is sent as a single JSON string**, not a nested object. OBS
+  marshals vendor-request data through `obs_data_t`, which drops the fields
+  inside arrays of objects while keeping the array length — so the page receives
+  the right number of verses with no text in them. Do not un-stringify it.
+- **The style travels with the content**, because the Browser Source cannot read
+  any of the projector keys above.
+- **The console must be served over `http://localhost`** to drive OBS: an HTTPS
+  page cannot open a `ws://` connection and obs-websocket has no TLS.
+
+The stream shows **one** language, chosen from the projector's armed set — only
+armed languages are fetched, so the choice is a filter over that set, and a
+language that is later disarmed falls back to the first armed one rather than
+blanking the stream. The stored preference is kept, so re-arming restores it.
+
+`StudioProvider.pushShow()` is the single point that writes `showData` *and*
+pushes to the bridge; the five call sites all go through it. The bridge is inert
+when OBS is not connected, so `/show` is unaffected.
+
+Setup, troubleshooting and the `?debug=1` overlay are documented in
+[`docs/obs-lower-third.md`](docs/obs-lower-third.md).
 
 ## Conventions
 

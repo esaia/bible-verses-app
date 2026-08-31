@@ -1,6 +1,7 @@
 import Select from '../ui/Select';
 import TranslationsSection from './TranslationsSection';
 import StyleSection from './StyleSection';
+import ObsSection from './ObsSection';
 import { useStudio } from '../StudioProvider';
 import { versionsByLang } from '../../data/bible';
 import { LANGS, LANG_LABELS } from '../useChapter';
@@ -50,6 +51,13 @@ const Sidebar = () => {
 
       <Section title="Style" hint="Background and typeface used on the projector screen.">
         <StyleSection />
+      </Section>
+
+      <Section
+        title="OBS lower third"
+        hint="Sends the live slide to an OBS Browser Source as a lower third, over a transparent background."
+      >
+        <ObsSection />
       </Section>
     </aside>
   );

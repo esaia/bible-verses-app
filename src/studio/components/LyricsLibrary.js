@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import IconButton from '../ui/IconButton';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import LyricCard from './LyricCard';
+import SlideEditor from './SlideEditor';
 import Setlist, { songDragProps } from './Setlist';
 import SongEditor from './SongEditor';
 import { useStudio } from '../StudioProvider';
@@ -44,6 +45,7 @@ const LyricsLibrary = () => {
   const [busy, setBusy] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(null);
+  const [editingSlide, setEditingSlide] = useState(null);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState(null);
 
@@ -235,6 +237,19 @@ const LyricsLibrary = () => {
 
       <SongEditor song={editing} onSave={updateSong} onClose={() => setEditing(null)} />
 
+      <SlideEditor
+        open={editingSlide !== null}
+        slide={active?.slides?.[editingSlide]}
+        index={editingSlide ?? 0}
+        onClose={() => setEditingSlide(null)}
+        onSave={text =>
+          updateSong({
+            ...active,
+            slides: active.slides.map((item, i) => (i === editingSlide ? { ...item, text } : item)),
+          })
+        }
+      />
+
       <div className="studio-scroll min-w-0 flex-1 overflow-y-auto px-1 pb-6">
         {error && (
           <p
@@ -271,6 +286,7 @@ const LyricsLibrary = () => {
                   align={lyricsAlign}
                   isLive={live?.kind === 'lyrics' && live.songId === active.id && live.slideIndex === index}
                   onGoLive={() => selectLyric(active, index)}
+                  onEdit={() => setEditingSlide(index)}
                 />
               ))}
             </div>

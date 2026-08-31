@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { versionsByLang } from '../data/bible';
 import useChapter, { LANGS } from './useChapter';
 import { TRANSITION_KEY, clampTransition, readTransition } from '../lib/transition';
+import { pushObs } from '../lib/obsBridge';
 
 const StudioContext = createContext(null);
 
@@ -122,6 +123,23 @@ const StudioProvider = ({ children }) => {
     return validOrder(stored) ? stored : DEFAULT_ORDER;
   });
   const [cardSize, setCardSize] = useState(() => read('studioCardSize', 190));
+  const [lowerThirdPosition, setLowerThirdPosition] = useState(
+    () => localStorage.getItem('lowerThirdPosition') || 'bottom',
+  );
+  const [lowerThirdVariant, setLowerThirdVariant] = useState(
+    () => localStorage.getItem('lowerThirdVariant') || 'scrim',
+  );
+  // Song slides and scripture want different graphics: a verse carries a
+  // reference worth setting, a lyric is one line of text and usually wants less
+  // furniture around it. Mirrors the projector's own verses/lyrics split.
+  const [lyricsVariant, setLyricsVariant] = useState(() => localStorage.getItem('lyricsVariant') || 'scrim');
+  // Blanks the overlay without dropping the OBS connection, so the operator can
+  // take verses off the stream while leaving them on the projector.
+  const [obsHidden, setObsHidden] = useState(() => localStorage.getItem('obsHidden') === '1');
+  /** The one language that reaches the stream. A lower third is read at a
+   *  glance over someone's shoulder, so stacking two or three translations in
+   *  it defeats the point — the projector is where the full stack belongs. */
+  const [streamLang, setStreamLang] = useState(() => localStorage.getItem('lowerThirdLanguage') || 'geo');
   const [loading, setLoading] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
 
@@ -144,6 +162,76 @@ const StudioProvider = ({ children }) => {
   useEffect(() => localStorage.setItem(TRANSITION_KEY, String(transitionMs)), [transitionMs]);
   useEffect(() => write('projectorOrder', langOrder), [langOrder]);
   useEffect(() => write('studioCardSize', cardSize), [cardSize]);
+  useEffect(() => localStorage.setItem('lowerThirdPosition', lowerThirdPosition), [lowerThirdPosition]);
+  useEffect(() => localStorage.setItem('lowerThirdVariant', lowerThirdVariant), [lowerThirdVariant]);
+  useEffect(() => localStorage.setItem('lyricsVariant', lyricsVariant), [lyricsVariant]);
+  useEffect(() => localStorage.setItem('obsHidden', obsHidden ? '1' : '0'), [obsHidden]);
+  useEffect(() => localStorage.setItem('lowerThirdLanguage', streamLang), [streamLang]);
+
+  /**
+   * Everything `/lower3rd` needs to draw a slide. The OBS Browser Source has
+   * no access to this origin's `localStorage`, so the style travels with the
+   * content instead of being read off the projector keys.
+   */
+  const obsStyle = useMemo(
+    () => ({
+      font: projectorFont,
+      align: textAlign,
+      lyricsFont,
+      lyricsAlign,
+      order: langOrder,
+      // Falling back to the first armed language rather than to nothing: only
+      // armed languages are fetched, so a chosen language that is later
+      // disarmed would otherwise blank the stream with no obvious cause.
+      enabled: (() => {
+        const armed = LANGS.filter(lang => enabled[lang]);
+        const chosen = armed.includes(streamLang) ? streamLang : armed[0];
+
+        return LANGS.reduce((acc, lang) => ({ ...acc, [lang]: lang === chosen }), {});
+      })(),
+      transitionMs,
+      position: lowerThirdPosition,
+      variant: lowerThirdVariant,
+      lyricsVariant,
+      hidden: obsHidden,
+    }),
+    [
+      projectorFont,
+      textAlign,
+      lyricsFont,
+      lyricsAlign,
+      langOrder,
+      enabled,
+      transitionMs,
+      lowerThirdPosition,
+      lowerThirdVariant,
+      lyricsVariant,
+      obsHidden,
+      streamLang,
+    ],
+  );
+
+  // The last slide pushed, kept so a style change can redraw OBS without the
+  // operator having to advance a verse. Held in a ref because `showData` lives
+  // in `localStorage`, not in state.
+  const lastShowRef = useRef(read('showData', emptyShowData));
+  const obsStyleRef = useRef(obsStyle);
+
+  useEffect(() => {
+    obsStyleRef.current = obsStyle;
+    pushObs({ showData: lastShowRef.current, style: obsStyle });
+  }, [obsStyle]);
+
+  /**
+   * Put a slide on both outputs: `showData` for the `/show` projector tab, and
+   * the OBS bridge for the Browser Source. The bridge is a no-op when OBS is
+   * not connected, so the projector path behaves exactly as it always has.
+   */
+  const pushShow = useCallback(payload => {
+    lastShowRef.current = payload;
+    write('showData', payload);
+    pushObs({ showData: payload, style: obsStyleRef.current });
+  }, []);
 
   /** Languages to fetch: everything armed for the projector, plus the admin
    *  language, whose text the verse cards are printed from. */
@@ -172,10 +260,10 @@ const StudioProvider = ({ children }) => {
         return acc;
       }, {});
 
-      write('showData', payload);
+      pushShow(payload);
       setLive({ blockId: block.id, verseIndex: groupIndex });
     },
-    [enabled],
+    [enabled, pushShow],
   );
 
   /**
@@ -408,6 +496,13 @@ const StudioProvider = ({ children }) => {
   }, []);
 
   /** Fold a passage down to its title, so long lists stay manageable. */
+  /** Fold or unfold every passage at once. With a dozen chapters imported, the
+   *  list is faster to navigate collapsed and the per-block chevrons are a lot
+   *  of clicks. */
+  const setAllCollapsed = useCallback(collapsed => {
+    setBlocks(current => current.map(block => ({ ...block, collapsed })));
+  }, []);
+
   const toggleBlockCollapsed = useCallback(id => {
     setBlocks(current => current.map(block => (block.id === id ? { ...block, collapsed: !block.collapsed } : block)));
   }, []);
@@ -429,25 +524,28 @@ const StudioProvider = ({ children }) => {
   );
 
   const clearProjector = useCallback(() => {
-    write('showData', emptyShowData);
+    pushShow(emptyShowData);
     setLive(null);
-  }, []);
+  }, [pushShow]);
 
   /**
    * Put one song slide on the projector. Lyrics ride in `showData` alongside
    * the verse slots rather than in them: they are one block of text with no
    * reference and no language, so `/show` renders them on their own path.
    */
-  const publishLyrics = useCallback((song, slideIndex) => {
-    const slide = song?.slides?.[slideIndex];
+  const publishLyrics = useCallback(
+    (song, slideIndex) => {
+      const slide = song?.slides?.[slideIndex];
 
-    if (!slide) {
-      return;
-    }
+      if (!slide) {
+        return;
+      }
 
-    write('showData', { ...emptyShowData, lyrics: { title: song.title, text: slide.text } });
-    setLive({ kind: 'lyrics', songId: song.id, slideIndex });
-  }, []);
+      pushShow({ ...emptyShowData, lyrics: { title: song.title, text: slide.text } });
+      setLive({ kind: 'lyrics', songId: song.id, slideIndex });
+    },
+    [pushShow],
+  );
 
   /** Clicking the slide that is already live clears the screen, as verses do. */
   const selectLyric = useCallback(
@@ -492,25 +590,28 @@ const StudioProvider = ({ children }) => {
    * slide was deleted outright, the screen clears rather than showing the
    * wrong verse.
    */
-  const updateSong = useCallback(edited => {
-    setSongs(current => current.map(song => (song.id === edited.id ? edited : song)));
+  const updateSong = useCallback(
+    edited => {
+      setSongs(current => current.map(song => (song.id === edited.id ? edited : song)));
 
-    setLive(current => {
-      if (current?.kind !== 'lyrics' || current.songId !== edited.id) {
+      setLive(current => {
+        if (current?.kind !== 'lyrics' || current.songId !== edited.id) {
+          return current;
+        }
+
+        const slide = edited.slides[current.slideIndex];
+
+        if (!slide) {
+          pushShow(emptyShowData);
+          return null;
+        }
+
+        pushShow({ ...emptyShowData, lyrics: { title: edited.title, text: slide.text } });
         return current;
-      }
-
-      const slide = edited.slides[current.slideIndex];
-
-      if (!slide) {
-        write('showData', emptyShowData);
-        return null;
-      }
-
-      write('showData', { ...emptyShowData, lyrics: { title: edited.title, text: slide.text } });
-      return current;
-    });
-  }, []);
+      });
+    },
+    [pushShow],
+  );
 
   /**
    * Drop a song into the set list at `index`, whether it is coming from the
@@ -703,6 +804,16 @@ const StudioProvider = ({ children }) => {
       moveLang,
       cardSize,
       setCardSize,
+      lowerThirdPosition,
+      setLowerThirdPosition,
+      lowerThirdVariant,
+      setLowerThirdVariant,
+      lyricsVariant,
+      setLyricsVariant,
+      obsHidden,
+      setObsHidden,
+      streamLang,
+      setStreamLang,
       loading,
       addPassage,
       removeBlock,
@@ -711,6 +822,7 @@ const StudioProvider = ({ children }) => {
       joinGroup,
       splitGroup,
       toggleBlockCollapsed,
+      setAllCollapsed,
       moveBlock,
       moveBlockTo,
       draggingId,
@@ -757,6 +869,11 @@ const StudioProvider = ({ children }) => {
       langOrder,
       moveLang,
       cardSize,
+      lowerThirdPosition,
+      lowerThirdVariant,
+      lyricsVariant,
+      obsHidden,
+      streamLang,
       loading,
       addPassage,
       removeBlock,
@@ -765,6 +882,7 @@ const StudioProvider = ({ children }) => {
       joinGroup,
       splitGroup,
       toggleBlockCollapsed,
+      setAllCollapsed,
       moveBlock,
       moveBlockTo,
       draggingId,
