@@ -23,6 +23,13 @@ const AppBar = () => {
       <div className="flex min-w-0 items-center gap-2">
         <span className="text-sm font-semibold text-studio-text">Bible Presenter</span>
         <span className="hidden text-xs text-studio-faint sm:inline">Studio</span>
+        <span
+          title="Test mode — this console is still being built, so expect the odd bug. Keep the classic view handy."
+          className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px]
+            font-semibold uppercase tracking-wide text-amber-700"
+        >
+          Test mode
+        </span>
       </div>
 
       <nav
