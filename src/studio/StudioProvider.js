@@ -80,7 +80,19 @@ const StudioProvider = ({ children }) => {
   const [previewOpen, setPreviewOpen] = useState(() => read('studioPreviewOpen', false));
 
   // Which workspace the main pane is showing: the passages, or the music library.
-  const [tab, setTab] = useState(() => (read('studioTab', 'bible') === 'audio' ? 'audio' : 'bible'));
+  const [tab, setTab] = useState(() => {
+    const stored = read('studioTab', 'bible');
+    return ['bible', 'audio', 'lyrics'].includes(stored) ? stored : 'bible';
+  });
+
+  // Songs imported from ProPresenter. Only the text is kept, so a whole
+  // bundle's worth of lyrics is a few tens of kilobytes.
+  const [songs, setSongs] = useState(() => read('studioSongs', []));
+  const [activeSongId, setActiveSongId] = useState(() => read('studioActiveSong', null));
+
+  // The songs picked for this service, in the order they will be sung. Held as
+  // ids so a re-import updates the set list's contents without rebuilding it.
+  const [setlist, setSetlist] = useState(() => read('studioSetlist', []));
 
   // The projector typeface, shared so the verse cards preview in it too.
   // Stored raw (not JSON) because the legacy console reads the same key.
@@ -88,6 +100,16 @@ const StudioProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => localStorage.getItem('themeNumber') || '1');
   const [dynamicImage, setDynamicImage] = useState(() => localStorage.getItem('dynamicImage') || '');
   const [textAlign, setTextAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
+
+  // Songs get their own typeface and alignment: a verse reads as a paragraph,
+  // a lyric slide as centred lines. Seeded from the verse settings the first
+  // time, so nothing changes on screen until the operator touches them.
+  const [lyricsFont, setLyricsFont] = useState(
+    () => localStorage.getItem('lyricsFont') || localStorage.getItem('font') || 'font-banner',
+  );
+  const [lyricsAlign, setLyricsAlign] = useState(
+    () => localStorage.getItem('lyricsAlign') || localStorage.getItem('projectorAlign') || 'left',
+  );
 
   // Slide-change crossfade in milliseconds, 0 for a hard cut. Stored raw so
   // `/show` reads it with a plain getItem.
@@ -110,10 +132,15 @@ const StudioProvider = ({ children }) => {
   useEffect(() => write('studioLive', live), [live]);
   useEffect(() => write('studioPreviewOpen', previewOpen), [previewOpen]);
   useEffect(() => write('studioTab', tab), [tab]);
+  useEffect(() => write('studioSongs', songs), [songs]);
+  useEffect(() => write('studioActiveSong', activeSongId), [activeSongId]);
+  useEffect(() => write('studioSetlist', setlist), [setlist]);
   useEffect(() => localStorage.setItem('font', projectorFont), [projectorFont]);
   useEffect(() => localStorage.setItem('themeNumber', theme), [theme]);
   useEffect(() => localStorage.setItem('dynamicImage', dynamicImage), [dynamicImage]);
   useEffect(() => localStorage.setItem('projectorAlign', textAlign), [textAlign]);
+  useEffect(() => localStorage.setItem('lyricsFont', lyricsFont), [lyricsFont]);
+  useEffect(() => localStorage.setItem('lyricsAlign', lyricsAlign), [lyricsAlign]);
   useEffect(() => localStorage.setItem(TRANSITION_KEY, String(transitionMs)), [transitionMs]);
   useEffect(() => write('projectorOrder', langOrder), [langOrder]);
   useEffect(() => write('studioCardSize', cardSize), [cardSize]);
@@ -407,6 +434,106 @@ const StudioProvider = ({ children }) => {
   }, []);
 
   /**
+   * Put one song slide on the projector. Lyrics ride in `showData` alongside
+   * the verse slots rather than in them: they are one block of text with no
+   * reference and no language, so `/show` renders them on their own path.
+   */
+  const publishLyrics = useCallback((song, slideIndex) => {
+    const slide = song?.slides?.[slideIndex];
+
+    if (!slide) {
+      return;
+    }
+
+    write('showData', { ...emptyShowData, lyrics: { title: song.title, text: slide.text } });
+    setLive({ kind: 'lyrics', songId: song.id, slideIndex });
+  }, []);
+
+  /** Clicking the slide that is already live clears the screen, as verses do. */
+  const selectLyric = useCallback(
+    (song, slideIndex) => {
+      if (live?.kind === 'lyrics' && live.songId === song.id && live.slideIndex === slideIndex) {
+        clearProjector();
+        return;
+      }
+
+      publishLyrics(song, slideIndex);
+    },
+    [clearProjector, live, publishLyrics],
+  );
+
+  /** Imported songs replace same-titled ones, so re-importing a bundle updates. */
+  const importSongs = useCallback(imported => {
+    setSongs(current => {
+      const titles = new Set(imported.map(song => song.title));
+      const kept = current.filter(song => !titles.has(song.title));
+
+      return [...kept, ...imported].sort((a, b) => a.title.localeCompare(b.title));
+    });
+  }, []);
+
+  const removeSong = useCallback(id => {
+    setSongs(current => current.filter(song => song.id !== id));
+    setSetlist(current => current.filter(songId => songId !== id));
+    setActiveSongId(current => (current === id ? null : current));
+    setLive(current => (current?.kind === 'lyrics' && current.songId === id ? null : current));
+  }, []);
+
+  const clearSongs = useCallback(() => {
+    setSongs([]);
+    setSetlist([]);
+    setActiveSongId(null);
+    setLive(current => (current?.kind === 'lyrics' ? null : current));
+  }, []);
+
+  /**
+   * Replace a song with an edited copy. If it is the song on screen, the
+   * projector is re-published so a corrected line appears at once; if the live
+   * slide was deleted outright, the screen clears rather than showing the
+   * wrong verse.
+   */
+  const updateSong = useCallback(edited => {
+    setSongs(current => current.map(song => (song.id === edited.id ? edited : song)));
+
+    setLive(current => {
+      if (current?.kind !== 'lyrics' || current.songId !== edited.id) {
+        return current;
+      }
+
+      const slide = edited.slides[current.slideIndex];
+
+      if (!slide) {
+        write('showData', emptyShowData);
+        return null;
+      }
+
+      write('showData', { ...emptyShowData, lyrics: { title: edited.title, text: slide.text } });
+      return current;
+    });
+  }, []);
+
+  /**
+   * Drop a song into the set list at `index`, whether it is coming from the
+   * library or being moved within the list. Removing it first means the index
+   * the operator aimed at is the slot it lands in.
+   */
+  const placeInSetlist = useCallback((songId, index) => {
+    setSetlist(current => {
+      const from = current.indexOf(songId);
+      const next = current.filter(id => id !== songId);
+      const target = from !== -1 && from < index ? index - 1 : index;
+
+      next.splice(Math.max(0, Math.min(target, next.length)), 0, songId);
+
+      return next;
+    });
+  }, []);
+
+  const removeFromSetlist = useCallback(id => setSetlist(current => current.filter(songId => songId !== id)), []);
+
+  const clearSetlist = useCallback(() => setSetlist([]), []);
+
+  /**
    * Clicking a verse sends it live; clicking the verse that is already live
    * clears the screen, so the operator can drop the text without reaching for
    * the Clear button.
@@ -451,6 +578,17 @@ const StudioProvider = ({ children }) => {
         return;
       }
 
+      if (live.kind === 'lyrics') {
+        const song = songs.find(item => item.id === live.songId);
+        const nextSlide = live.slideIndex + direction;
+
+        if (song && nextSlide >= 0 && nextSlide < song.slides.length) {
+          publishLyrics(song, nextSlide);
+        }
+
+        return;
+      }
+
       const block = blocks.find(item => item.id === live.blockId);
       const total = block?.groups?.length || 0;
       const next = live.verseIndex + direction;
@@ -461,7 +599,7 @@ const StudioProvider = ({ children }) => {
 
       goLive(block.id, next);
     },
-    [blocks, goLive, live],
+    [blocks, goLive, live, publishLyrics, songs],
   );
 
   /** Re-fetch every open passage — used when a translation setting changes. */
@@ -534,6 +672,19 @@ const StudioProvider = ({ children }) => {
       previewOpen,
       tab,
       setTab,
+      songs,
+      activeSongId,
+      setActiveSongId,
+      importSongs,
+      updateSong,
+      removeSong,
+      clearSongs,
+      setlist,
+      placeInSetlist,
+      removeFromSetlist,
+      clearSetlist,
+      publishLyrics,
+      selectLyric,
       projectorFont,
       setProjectorFont,
       theme,
@@ -542,6 +693,10 @@ const StudioProvider = ({ children }) => {
       setDynamicImage,
       textAlign,
       setTextAlign,
+      lyricsFont,
+      setLyricsFont,
+      lyricsAlign,
+      setLyricsAlign,
       transitionMs,
       setTransitionMs,
       langOrder,
@@ -579,10 +734,24 @@ const StudioProvider = ({ children }) => {
       live,
       previewOpen,
       tab,
+      songs,
+      activeSongId,
+      importSongs,
+      updateSong,
+      removeSong,
+      clearSongs,
+      setlist,
+      placeInSetlist,
+      removeFromSetlist,
+      clearSetlist,
+      publishLyrics,
+      selectLyric,
       projectorFont,
       theme,
       dynamicImage,
       textAlign,
+      lyricsFont,
+      lyricsAlign,
       transitionMs,
       setTransitionMs,
       langOrder,

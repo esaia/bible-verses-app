@@ -20,6 +20,39 @@ const FONTS = [
   { value: 'font-notoserif', label: 'Noto Serif' },
 ];
 
+/** Typeface and alignment for one kind of slide: verses, or song lyrics. */
+const TypeRow = ({ label, font, setFont, align, setAlign }) => (
+  <div>
+    <span className="mb-1 block px-0.5 text-[11px] text-studio-faint">{label}</span>
+
+    <div className="flex items-center gap-1.5">
+      <Select className="min-w-0 flex-1" value={font} onChange={setFont} options={FONTS} />
+
+      <div className="flex shrink-0 items-center gap-0.5 rounded-studio border border-studio-border p-0.5">
+        {ALIGNMENTS.map(({ value, label: title, Icon }) => (
+          <button
+            key={value}
+            type="button"
+            aria-label={`${title} — ${label.toLowerCase()}`}
+            title={`${title} — ${label.toLowerCase()}`}
+            aria-pressed={align === value}
+            onClick={() => setAlign(value)}
+            className={`flex h-6 w-6 items-center justify-center rounded-[4px] transition-colors duration-150
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
+              ${
+                align === value
+                  ? 'bg-studio-accent text-white'
+                  : 'text-studio-muted hover:bg-studio-surface hover:text-studio-text'
+              }`}
+          >
+            <Icon className="text-sm" />
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 /**
  * Writes the same `themeNumber` / `dynamicImage` / `font` keys the projector
  * has always read, so backgrounds set here work on `/show` unchanged.
@@ -34,6 +67,10 @@ const StyleSection = () => {
     setDynamicImage,
     textAlign,
     setTextAlign,
+    lyricsFont,
+    setLyricsFont,
+    lyricsAlign,
+    setLyricsAlign,
     transitionMs,
     setTransitionMs,
   } = useStudio();
@@ -87,31 +124,15 @@ const StyleSection = () => {
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <Select className="min-w-0 flex-1" value={projectorFont} onChange={setProjectorFont} options={FONTS} />
+      <TypeRow
+        label="Verses"
+        font={projectorFont}
+        setFont={setProjectorFont}
+        align={textAlign}
+        setAlign={setTextAlign}
+      />
 
-        <div className="flex shrink-0 items-center gap-0.5 rounded-studio border border-studio-border p-0.5">
-          {ALIGNMENTS.map(({ value, label, Icon }) => (
-            <button
-              key={value}
-              type="button"
-              aria-label={label}
-              title={label}
-              aria-pressed={textAlign === value}
-              onClick={() => setTextAlign(value)}
-              className={`flex h-6 w-6 items-center justify-center rounded-[4px] transition-colors duration-150
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
-                ${
-                  textAlign === value
-                    ? 'bg-studio-accent text-white'
-                    : 'text-studio-muted hover:bg-studio-surface hover:text-studio-text'
-                }`}
-            >
-              <Icon className="text-sm" />
-            </button>
-          ))}
-        </div>
-      </div>
+      <TypeRow label="Lyrics" font={lyricsFont} setFont={setLyricsFont} align={lyricsAlign} setAlign={setLyricsAlign} />
 
       <div className="flex items-center gap-2">
         <span className="shrink-0 text-[11px] text-studio-faint">Transition</span>

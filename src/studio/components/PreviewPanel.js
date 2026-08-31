@@ -60,6 +60,9 @@ const PreviewPanel = () => {
     textAlign,
     langOrder,
     transitionMs,
+    songs,
+    lyricsFont,
+    lyricsAlign,
   } = useStudio();
 
   // The panel runs the projector's own crossfade, at the operator's setting, so
@@ -77,7 +80,10 @@ const PreviewPanel = () => {
   // the `live` pointer, because editing a passage — adding a verse at the
   // start, say — shifts the pointer without changing the verse on screen, and
   // that must not look like a slide change.
-  const liveBlock = blocks.find(item => item.id === live?.blockId);
+  const liveSong = live?.kind === 'lyrics' ? songs.find(item => item.id === live.songId) : null;
+  const liveLyrics = liveSong?.slides?.[live.slideIndex]?.text || '';
+
+  const liveBlock = liveSong ? null : blocks.find(item => item.id === live?.blockId);
   const liveGroup = liveBlock?.groups?.[live?.verseIndex];
   const liveRows = langOrder
     .filter(lang => enabled[lang])
@@ -85,12 +91,12 @@ const PreviewPanel = () => {
       lang,
       items: liveBlock && liveGroup ? groupVerses(liveBlock, lang, liveGroup) : [],
     }));
-  const signature = JSON.stringify(liveRows.map(row => [row.lang, row.items.map(item => item.bv)]));
+  const signature = JSON.stringify([liveLyrics, liveRows.map(row => [row.lang, row.items.map(item => item.bv)])]);
 
   // What the panel is showing right now, which lags the live text by one fade.
   // Swapping only while the text is invisible means the refit measures the
   // incoming verse and the operator never sees a hard cut.
-  const [displayed, setDisplayed] = useState({ rows: liveRows, signature });
+  const [displayed, setDisplayed] = useState({ rows: liveRows, lyrics: liveLyrics, signature });
   const [visible, setVisible] = useState(true);
 
   // Placed on first open so it lands in the corner of the current window.
@@ -191,7 +197,7 @@ const PreviewPanel = () => {
     }
 
     if (fadeMs === 0) {
-      setDisplayed({ rows: liveRows, signature });
+      setDisplayed({ rows: liveRows, lyrics: liveLyrics, signature });
       setVisible(true);
       return undefined;
     }
@@ -199,7 +205,7 @@ const PreviewPanel = () => {
     setVisible(false);
 
     const swap = setTimeout(() => {
-      setDisplayed({ rows: liveRows, signature });
+      setDisplayed({ rows: liveRows, lyrics: liveLyrics, signature });
       setVisible(true);
     }, fadeMs);
 
@@ -208,13 +214,23 @@ const PreviewPanel = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, displayed.signature, fadeMs]);
 
-  // Same fit as the projector, scaled to the panel — so the preview shows what
-  // will actually be on screen, and never needs a scrollbar.
+  // Same fit as the projector, in proportion to the panel — the bounds are the
+  // projector's own, expressed as fractions of the screen height, so a slide
+  // that fills the projector fills the preview too.
   useEffect(() => {
     const refit = () => {
-      if (screenRef.current) {
-        fitText(textRef.current, screenRef.current.clientHeight - 12, { min: 5, max: 40 });
+      const box = screenRef.current;
+
+      if (!box) {
+        return;
       }
+
+      const height = box.clientHeight;
+
+      fitText(textRef.current, height * 0.89, {
+        min: 5,
+        max: Math.max(6, Math.round(height / (displayed.lyrics ? 4 : 13))),
+      });
     };
 
     refit();
@@ -229,7 +245,7 @@ const PreviewPanel = () => {
   });
 
   const rows = displayed.rows;
-  const hasContent = rows.some(row => row.items.length > 0);
+  const hasContent = Boolean(displayed.lyrics) || rows.some(row => row.items.length > 0);
 
   if (!previewOpen || !geometry) {
     return null;
@@ -292,6 +308,12 @@ const PreviewPanel = () => {
             >
               {!hasContent ? (
                 <p className="text-xs text-white/40">Nothing is live</p>
+              ) : displayed.lyrics ? (
+                <div ref={textRef} className={`w-full ${lyricsFont}`}>
+                  <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[lyricsAlign]}`}>
+                    {displayed.lyrics.split('\n').join(' ')}
+                  </p>
+                </div>
               ) : (
                 <div ref={textRef} className={`w-full ${projectorFont}`}>
                   {rows.map(({ lang, items }) =>

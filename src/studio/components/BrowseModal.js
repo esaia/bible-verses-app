@@ -3,6 +3,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { useStudio } from '../StudioProvider';
 import { booksOf, bookName, bookMatches, normalizeName } from '../../lib/passage';
+import { chapterCount, verseCount } from '../../data/versification';
 import { HiOutlineSearch } from 'react-icons/hi';
 
 const Breadcrumb = ({ parts }) => (
@@ -49,17 +50,21 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
   const [book, setBook] = useState(null);
   const [chapter, setChapter] = useState(null);
   const [counts, setCounts] = useState({ chapters: 0, verses: 0 });
-  const [loading, setLoading] = useState(false);
   const [range, setRange] = useState(null);
   const [query, setQuery] = useState('');
 
   const searchRef = useRef(null);
+
+  // Bumped on every pick so a slow response for an abandoned book or chapter
+  // cannot overwrite the counts of the one now on screen.
+  const pickId = useRef(0);
 
   const books = booksOf(admin.lang);
   const needle = normalizeName(query);
   const matches = needle ? books.filter(entry => bookMatches(entry.book, needle)) : books;
 
   const reset = () => {
+    pickId.current += 1;
     setBook(null);
     setChapter(null);
     setRange(null);
@@ -89,26 +94,37 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
     }
   }, [open, book]);
 
+  /**
+   * The grids are drawn straight from the static catalogue, so picking a book
+   * or a chapter never waits on the network. The request still goes out: it
+   * corrects the count if this translation numbers things differently, and it
+   * warms the chapter cache so going live afterwards costs nothing.
+   */
   const pickBook = async next => {
+    const id = ++pickId.current;
+
     setBook(next);
     setChapter(null);
     setRange(null);
-    setLoading(true);
+    setCounts({ chapters: chapterCount(next.book), verses: 0 });
 
     try {
       const chapters = await loadChapterCount({ book: next.book, lang: admin.lang, version: admin.version });
-      setCounts({ chapters, verses: 0 });
+
+      if (chapters && id === pickId.current) {
+        setCounts({ chapters, verses: 0 });
+      }
     } catch (e) {
-      setCounts({ chapters: 0, verses: 0 });
-    } finally {
-      setLoading(false);
+      // Keep the catalogue counts.
     }
   };
 
   const pickChapter = async next => {
+    const id = ++pickId.current;
+
     setChapter(next);
     setRange(null);
-    setLoading(true);
+    setCounts(current => ({ ...current, verses: verseCount(book.book, next, admin.lang) }));
 
     try {
       const verses = await loadVerseCount({
@@ -117,11 +133,12 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
         lang: admin.lang,
         version: admin.version,
       });
-      setCounts(current => ({ ...current, verses }));
+
+      if (verses && id === pickId.current) {
+        setCounts(current => ({ ...current, verses }));
+      }
     } catch (e) {
-      setCounts(current => ({ ...current, verses: 0 }));
-    } finally {
-      setLoading(false);
+      // Keep the catalogue counts.
     }
   };
 
@@ -189,9 +206,7 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
         </>
       }
     >
-      {loading && <p className="py-8 text-center text-sm text-studio-muted">Loading…</p>}
-
-      {!loading && step === 'books' && (
+      {step === 'books' && (
         <>
           <div className="relative mb-3 flex items-center">
             <HiOutlineSearch className="pointer-events-none absolute left-3 text-base text-studio-faint" />
@@ -229,7 +244,7 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
         </>
       )}
 
-      {!loading && step === 'chapters' && (
+      {step === 'chapters' && (
         <div className="grid grid-cols-6 gap-2 pb-2 sm:grid-cols-8 md:grid-cols-10">
           {Array.from({ length: counts.chapters }, (_, i) => i + 1).map(n => (
             <GridButton key={n} onClick={() => pickChapter(n)}>
@@ -239,7 +254,7 @@ const BrowseModal = ({ open, initialBook, onClose, onPick }) => {
         </div>
       )}
 
-      {!loading && step === 'verses' && (
+      {step === 'verses' && (
         <div className="pb-2">
           <div className="grid grid-cols-6 gap-2 sm:grid-cols-8 md:grid-cols-10">
             {Array.from({ length: counts.verses }, (_, i) => i + 1).map(n => (

@@ -1,10 +1,17 @@
 import { Link } from 'react-router-dom';
-import { HiOutlineExternalLink, HiOutlineDesktopComputer, HiOutlineBookOpen, HiOutlineMusicNote } from 'react-icons/hi';
+import {
+  HiOutlineExternalLink,
+  HiOutlineDesktopComputer,
+  HiOutlineBookOpen,
+  HiOutlineMusicNote,
+  HiOutlineMicrophone,
+} from 'react-icons/hi';
 import Button from '../ui/Button';
 import { useStudio } from '../StudioProvider';
 
 const TABS = [
   { id: 'bible', label: 'Bible', Icon: HiOutlineBookOpen },
+  { id: 'lyrics', label: 'Lyrics', Icon: HiOutlineMicrophone },
   { id: 'audio', label: 'Audio', Icon: HiOutlineMusicNote },
 ];
 

@@ -1,7 +1,12 @@
 /**
- * Grow `element`'s font size until it would exceed `available` pixels tall,
- * then keep the last size that fitted. Used by the projector and by the
- * preview panel so both scale text the same way.
+ * Grow `element`'s font size until the text would exceed `available` pixels
+ * tall or spill out of its own box sideways, then keep the last size that
+ * fitted. Used by the projector and by the preview panel so both scale text the
+ * same way.
+ *
+ * The width test matters for song lyrics: one long Georgian word has no break
+ * opportunity, so past a certain size it runs off the screen edges while the
+ * block is still short enough to pass the height test.
  */
 export const fitText = (element, available, { min = 8, max = 64 } = {}) => {
   if (!element || available <= 0) {
@@ -12,9 +17,11 @@ export const fitText = (element, available, { min = 8, max = 64 } = {}) => {
   // monotonically with font size, and every probe forces a layout, so this
   // turns ~50 reflows into ~6. That matters when dozens of verse cards refit
   // at once while the size slider moves.
+  const fits = () => element.offsetHeight <= available && element.scrollWidth <= element.clientWidth;
+
   element.style.fontSize = `${max}px`;
 
-  if (element.offsetHeight <= available) {
+  if (fits()) {
     return;
   }
 
@@ -26,7 +33,7 @@ export const fitText = (element, available, { min = 8, max = 64 } = {}) => {
     const mid = Math.floor((low + high) / 2);
     element.style.fontSize = `${mid}px`;
 
-    if (element.offsetHeight <= available) {
+    if (fits()) {
       best = mid;
       low = mid + 1;
     } else {
