@@ -20,6 +20,7 @@ const StudioWorkspace = () => {
   const { blocks, loading, clearBlocks, stepLive, clearProjector, tab } = useStudio();
 
   const [searching, setSearching] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = e => {
@@ -59,17 +60,17 @@ const StudioWorkspace = () => {
 
   return (
     <div className="flex h-screen flex-col bg-studio-bg font-ui text-studio-text">
-      <AppBar />
+      <AppBar onOpenNav={() => setNavOpen(true)} />
 
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
+        <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           {tab === 'bible' && <SearchBar />}
 
           <main
-            className={`studio-scroll relative flex-1 px-4
-              ${tab === 'lyrics' ? 'overflow-hidden pb-0' : 'overflow-y-auto pb-28'}`}
+            className={`studio-scroll relative flex-1 px-3 sm:px-4
+              ${tab === 'lyrics' ? 'overflow-y-auto pb-6 lg:overflow-hidden lg:pb-0' : 'overflow-y-auto pb-28'}`}
           >
             {loading && (
               <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-studio-divider">

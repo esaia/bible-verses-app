@@ -32,9 +32,27 @@ const sanitize = value =>
     ? { x: value.x, y: value.y, width: value.width, height: value.height }
     : null;
 
+/** Panel geometry cut down to the window it is opening in — a size saved on a
+ *  desktop must not reopen wider than a phone. */
+const fit = value => {
+  if (!value) {
+    return null;
+  }
+
+  const width = clamp(value.width, Math.min(MIN_WIDTH, window.innerWidth - 16), window.innerWidth - 16);
+  const height = heightFor(width);
+
+  return {
+    width,
+    height,
+    x: clamp(value.x, 0, Math.max(0, window.innerWidth - width)),
+    y: clamp(value.y, 0, Math.max(0, window.innerHeight - 48)),
+  };
+};
+
 const readGeometry = () => {
   try {
-    return sanitize(JSON.parse(localStorage.getItem(GEOMETRY_KEY)));
+    return fit(sanitize(JSON.parse(localStorage.getItem(GEOMETRY_KEY))));
   } catch (e) {
     return null;
   }
@@ -131,18 +149,10 @@ const PreviewPanel = () => {
     }
   }, [geometry]);
 
-  // Keep the panel reachable when the window shrinks.
+  // Keep the panel reachable when the window shrinks — a panel sized on a
+  // desktop must narrow rather than hang off the side of a phone.
   useEffect(() => {
-    const handleResize = () =>
-      setGeometry(current =>
-        current
-          ? {
-              ...current,
-              x: clamp(current.x, 0, window.innerWidth - current.width),
-              y: clamp(current.y, 0, window.innerHeight - 48),
-            }
-          : current,
-      );
+    const handleResize = () => setGeometry(current => fit(current) || current);
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);

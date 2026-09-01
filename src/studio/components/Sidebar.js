@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
-import { MdChevronRight, MdOutlineSlideshow, MdOutlineVideocam } from 'react-icons/md';
+import { MdChevronRight, MdClose, MdOutlineSlideshow, MdOutlineVideocam } from 'react-icons/md';
 import Select from '../ui/Select';
+import IconButton from '../ui/IconButton';
 import TranslationsSection from './TranslationsSection';
 import StreamSection from './StreamSection';
 import { fontLabel } from './StyleSection';
@@ -56,16 +57,26 @@ const SummaryRow = ({ Icon, label, value, thumb, onClick }) => (
  * The live rail: what is being browsed, and what the projector is armed with.
  * Setup — backgrounds, typefaces, the OBS bridge — sits one click away in the
  * settings dialog, summarised at the foot of the rail.
+ *
+ * Below `lg` there is no room for a permanent column, so the same rail is
+ * rendered a second time as a drawer the app bar's menu button slides in.
  */
-const Sidebar = () => {
+const Sidebar = ({ open, onClose }) => {
   const { admin, setAdmin, theme, projectorFont, openSettings } = useStudio();
   const obs = useSyncExternalStore(subscribeObs, getObsState);
 
   const status = obsStatus(obs);
   const background = THEMES.find(item => item.id === theme);
 
-  return (
-    <aside className="flex h-full w-[264px] shrink-0 flex-col border-r border-studio-border bg-white">
+  // The drawer covers the workspace, so opening a dialog from it has to put the
+  // workspace back first.
+  const openPanel = panel => {
+    onClose();
+    openSettings(panel);
+  };
+
+  const rail = (
+    <>
       <div className="studio-scroll min-h-0 flex-1 overflow-y-auto">
         <Section title="Browsing in" hint="The language and translation printed on the verse cards below.">
           <div className="space-y-2">
@@ -102,17 +113,50 @@ const Sidebar = () => {
           label="Projector look"
           value={`${background?.label || 'Custom image'} · ${fontLabel(projectorFont)}`}
           thumb={background?.src}
-          onClick={() => openSettings('projector')}
+          onClick={() => openPanel('projector')}
         />
 
         <SummaryRow
           Icon={MdOutlineVideocam}
           label="Stream"
           value={obs.enabled ? status.label : 'Not sending to OBS'}
-          onClick={() => openSettings('stream')}
+          onClick={() => openPanel('stream')}
         />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <aside className="hidden h-full w-[264px] shrink-0 flex-col border-r border-studio-border bg-white lg:flex">
+        {rail}
+      </aside>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <div
+            aria-hidden="true"
+            onClick={onClose}
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(16, 24, 40, 0.5)' }}
+          />
+
+          <aside
+            className="relative flex h-full w-[264px] max-w-[85vw] flex-col border-r border-studio-border
+              bg-white shadow-studio-modal"
+          >
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-studio-border px-4">
+              <span className="text-sm font-semibold text-studio-text">Setup</span>
+              <IconButton label="Close menu" onClick={onClose}>
+                <MdClose className="text-lg" />
+              </IconButton>
+            </div>
+
+            {rail}
+          </aside>
+        </div>
+      )}
+    </>
   );
 };
 

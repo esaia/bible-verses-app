@@ -57,7 +57,7 @@ const Setlist = ({ onEdit }) => {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex flex-col lg:min-h-0 lg:flex-1">
       <div className="mb-1 flex items-center justify-between px-0.5">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-studio-faint">
           Playlist{items.length > 0 && ` · ${items.length}`}
@@ -78,7 +78,8 @@ const Setlist = ({ onEdit }) => {
         onDragOver={allowDrop(items.length)}
         onDragLeave={() => setDropIndex(null)}
         onDrop={handleDrop(items.length)}
-        className={`studio-scroll min-h-[96px] flex-1 overflow-y-auto rounded-studio border
+        className={`studio-scroll max-h-56 min-h-[96px] overflow-y-auto rounded-studio border
+          lg:max-h-none lg:flex-1
           ${dropIndex !== null ? 'border-studio-accent bg-studio-accent/5' : 'border-dashed border-studio-border'}`}
       >
         {items.length === 0 ? (

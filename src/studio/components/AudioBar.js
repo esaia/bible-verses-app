@@ -24,12 +24,12 @@ const AudioBar = () => {
   }
 
   return (
-    <div className="flex h-12 shrink-0 items-center gap-3 border-t border-studio-border bg-white px-4">
+    <div className="flex h-12 shrink-0 items-center gap-2 border-t border-studio-border bg-white px-3 sm:gap-3 sm:px-4">
       <IconButton label={playing ? 'Fade out' : 'Play'} onClick={togglePlay}>
         {playing ? <HiOutlinePause className="text-base" /> : <HiOutlinePlay className="text-base" />}
       </IconButton>
 
-      <div className="w-40 shrink-0">
+      <div className="hidden w-40 shrink-0 sm:block">
         <p className="truncate text-xs font-medium text-studio-text">{current.title}</p>
         <p className="truncate text-[11px] text-studio-faint">{current.artist}</p>
       </div>
@@ -63,7 +63,7 @@ const AudioBar = () => {
         <HiOutlineRefresh className="text-base" />
       </button>
 
-      <span className="flex shrink-0 items-center gap-1.5">
+      <span className="hidden shrink-0 items-center gap-1.5 md:flex">
         <HiOutlineVolumeUp className="text-base text-studio-faint" />
         <input
           type="range"

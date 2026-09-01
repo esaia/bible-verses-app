@@ -57,9 +57,9 @@ const SearchBar = () => {
 
   return (
     <>
-      <div className="border-b border-studio-divider bg-white px-4 py-3">
-        <form onSubmit={submit} className="flex items-center gap-2">
-          <div className="relative flex min-w-0 flex-1 items-center">
+      <div className="border-b border-studio-divider bg-white px-3 py-3 sm:px-4">
+        <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+          <div className="relative flex w-full min-w-0 basis-full items-center sm:w-auto sm:flex-1 sm:basis-0">
             <HiOutlineSearch className="pointer-events-none absolute left-3 text-base text-studio-faint" />
             <input
               type="text"

@@ -120,8 +120,8 @@ const LyricsLibrary = ({ onSearch }) => {
   };
 
   return (
-    <div className="flex h-full min-h-0 gap-4 py-3">
-      <div className="flex w-60 shrink-0 flex-col gap-2">
+    <div className="flex min-h-0 flex-col gap-4 py-3 lg:h-full lg:flex-row">
+      <div className="flex w-full shrink-0 flex-col gap-2 lg:w-60">
         <input
           ref={fileRef}
           type="file"
@@ -181,7 +181,12 @@ const LyricsLibrary = ({ onSearch }) => {
           </button>
         )}
 
-        <div className="studio-scroll min-h-0 flex-1 overflow-y-auto rounded-studio border border-studio-border">
+        {/* Stacked, the column has no height of its own to divide up, so the
+            list takes its natural height under a cap rather than a share. */}
+        <div
+          className="studio-scroll max-h-56 overflow-y-auto rounded-studio border border-studio-border
+            lg:max-h-none lg:min-h-0 lg:flex-1"
+        >
           {songs.map(song => (
             <div
               key={song.id}
@@ -281,7 +286,7 @@ const LyricsLibrary = ({ onSearch }) => {
         }
       />
 
-      <div className="studio-scroll min-w-0 flex-1 overflow-y-auto px-1 pb-6">
+      <div className="studio-scroll min-w-0 px-1 pb-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
         {error && (
           <p
             className="mb-3 rounded-studio border border-studio-danger/30 bg-red-50 px-3 py-2 text-xs
@@ -292,7 +297,7 @@ const LyricsLibrary = ({ onSearch }) => {
         )}
 
         {!active ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 text-center lg:h-full">
             <p className="text-sm font-medium text-studio-text">No songs yet</p>
             <p className="max-w-sm text-xs text-studio-muted">
               Press <strong className="font-semibold text-studio-text">New song</strong> to type one in, or import a

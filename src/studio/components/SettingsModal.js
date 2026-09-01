@@ -26,7 +26,7 @@ const SettingsModal = () => {
       onClose={closeSettings}
       width="max-w-4xl"
       title={
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
           <h2 className="shrink-0 text-sm font-semibold text-studio-text">Settings</h2>
 
           <nav
