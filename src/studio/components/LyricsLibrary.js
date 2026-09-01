@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   HiOutlineDocumentAdd,
   HiOutlineDownload,
   HiOutlinePencil,
   HiOutlinePlus,
+  HiOutlineSearch,
   HiOutlineTrash,
   HiOutlineUpload,
 } from 'react-icons/hi';
@@ -15,6 +16,7 @@ import SlideEditor from './SlideEditor';
 import Setlist, { songDragProps } from './Setlist';
 import SongEditor from './SongEditor';
 import { useStudio } from '../StudioProvider';
+import { SEARCH_HINT } from './SongSearch';
 import { parseDroppedFiles } from '../../lib/propresenter';
 
 // Generated from a ProPresenter bundle by `scripts/build-lyrics-library.js` and
@@ -28,7 +30,7 @@ const BUILT_IN_LIBRARY = '/lyrics/library.json';
  * sends it to the projector exactly as clicking a verse does, so ← and →
  * step through a song the same way they step through a passage.
  */
-const LyricsLibrary = () => {
+const LyricsLibrary = ({ onSearch }) => {
   const {
     songs,
     activeSongId,
@@ -49,7 +51,6 @@ const LyricsLibrary = () => {
 
   const fileRef = useRef(null);
 
-  const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(null);
@@ -66,12 +67,6 @@ const LyricsLibrary = () => {
       title: '',
       slides: [{ id: `slide-${Date.now()}`, text: '' }],
     });
-
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-
-    return needle ? songs.filter(song => song.title.toLowerCase().includes(needle)) : songs;
-  }, [query, songs]);
 
   const handleFiles = async event => {
     const files = [...event.target.files];
@@ -167,29 +162,31 @@ const LyricsLibrary = () => {
         {songs.length > 0 && <Setlist onEdit={setEditing} />}
 
         {songs.length > 0 && (
-          <>
-            <h3 className="mt-1 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-studio-faint">
-              Library · {filtered.length === songs.length ? songs.length : `${filtered.length} of ${songs.length}`}
-            </h3>
+          <button
+            type="button"
+            onClick={onSearch}
+            title="Search the library"
+            className="mt-1 flex items-center justify-between gap-2 rounded-studio px-0.5 py-0.5 text-left
+              transition-colors duration-150 hover:bg-studio-surface focus:outline-none
+              focus-visible:ring-2 focus-visible:ring-studio-accent/40"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-studio-faint">
+              Library · {songs.length}
+            </span>
 
-            <input
-              type="search"
-              value={query}
-              placeholder="Find a song"
-              onChange={e => setQuery(e.target.value)}
-              className="h-8 rounded-studio border border-studio-border px-2.5 text-xs text-studio-text
-                placeholder:text-studio-faint focus:outline-none
-                focus-visible:ring-2 focus-visible:ring-studio-accent/40"
-            />
-          </>
+            <span className="flex items-center gap-1 text-[11px] text-studio-faint">
+              <HiOutlineSearch className="text-xs" />
+              {SEARCH_HINT}
+            </span>
+          </button>
         )}
 
         <div className="studio-scroll min-h-0 flex-1 overflow-y-auto rounded-studio border border-studio-border">
-          {filtered.map(song => (
+          {songs.map(song => (
             <div
               key={song.id}
               {...songDragProps(song.id)}
-              title="Drag into the set list"
+              title="Drag onto the playlist"
               className={`group/song flex cursor-grab items-center gap-1 border-b border-studio-divider last:border-b-0
                 ${song.id === active?.id ? 'bg-studio-accent/10' : 'hover:bg-studio-surface'}`}
             >
@@ -210,7 +207,7 @@ const LyricsLibrary = () => {
 
               <span className="flex shrink-0 pr-1 opacity-0 transition-opacity group-hover/song:opacity-100">
                 <IconButton
-                  label={`Add ${song.title} to the set list`}
+                  label={`Add ${song.title} to the playlist`}
                   onClick={() => placeInSetlist(song.id, setlist.length)}
                 >
                   <HiOutlinePlus className="text-sm" />
@@ -227,10 +224,8 @@ const LyricsLibrary = () => {
             </div>
           ))}
 
-          {filtered.length === 0 && (
-            <p className="px-3 py-6 text-center text-xs text-studio-faint">
-              {songs.length === 0 ? 'No songs imported yet.' : 'Nothing matches that.'}
-            </p>
+          {songs.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-studio-faint">No songs imported yet.</p>
           )}
         </div>
 
@@ -244,7 +239,7 @@ const LyricsLibrary = () => {
           open={Boolean(confirmingRemove)}
           title="Remove this song?"
           message={`“${confirmingRemove?.title}” and its ${confirmingRemove?.slides.length} slides are deleted, and it
-            leaves the set list. Importing the bundle again brings it back.`}
+            leaves the playlist. Importing the bundle again brings it back.`}
           confirmLabel="Remove song"
           onCancel={() => setConfirmingRemove(null)}
           onConfirm={() => {
@@ -256,7 +251,7 @@ const LyricsLibrary = () => {
         <ConfirmDialog
           open={confirmingClear}
           title="Remove all songs?"
-          message={`This deletes all ${songs.length} imported songs and empties the set list. The bundle itself is
+          message={`This deletes all ${songs.length} imported songs and empties the playlist. The bundle itself is
             untouched — you can import it again.`}
           confirmLabel="Remove all songs"
           onCancel={() => setConfirmingClear(false)}

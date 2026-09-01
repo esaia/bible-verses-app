@@ -92,7 +92,7 @@ const StudioProvider = ({ children }) => {
   const [activeSongId, setActiveSongId] = useState(() => read('studioActiveSong', null));
 
   // The songs picked for this service, in the order they will be sung. Held as
-  // ids so a re-import updates the set list's contents without rebuilding it.
+  // ids so a re-import updates the playlist's contents without rebuilding it.
   const [setlist, setSetlist] = useState(() => read('studioSetlist', []));
 
   // The projector typeface, shared so the verse cards preview in it too.
@@ -620,7 +620,7 @@ const StudioProvider = ({ children }) => {
   );
 
   /**
-   * Drop a song into the set list at `index`, whether it is coming from the
+   * Drop a song into the playlist at `index`, whether it is coming from the
    * library or being moved within the list. Removing it first means the index
    * the operator aimed at is the slot it lands in.
    */

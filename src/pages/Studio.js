@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import StudioProvider, { useStudio } from '../studio/StudioProvider';
 import AppBar from '../studio/components/AppBar';
 import Sidebar from '../studio/components/Sidebar';
@@ -12,14 +12,25 @@ import LyricsLibrary from '../studio/components/LyricsLibrary';
 import AudioBar from '../studio/components/AudioBar';
 import Button from '../studio/ui/Button';
 import SettingsModal from '../studio/components/SettingsModal';
+import SongSearch from '../studio/components/SongSearch';
 
 const isTyping = target => target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 
 const StudioWorkspace = () => {
   const { blocks, loading, clearBlocks, stepLive, clearProjector, tab } = useStudio();
 
+  const [searching, setSearching] = useState(false);
+
   useEffect(() => {
     const handleKeyDown = e => {
+      // Before the typing guard: ⌘F reaches the library from anywhere, as it
+      // does in ProPresenter, and takes the shortcut off the browser's find bar.
+      if (e.key === 'f' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearching(true);
+        return;
+      }
+
       if (isTyping(e.target)) {
         return;
       }
@@ -69,7 +80,7 @@ const StudioWorkspace = () => {
             {tab === 'audio' ? (
               <AudioLibrary />
             ) : tab === 'lyrics' ? (
-              <LyricsLibrary />
+              <LyricsLibrary onSearch={() => setSearching(true)} />
             ) : blocks.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
                 <p className="text-sm font-medium text-studio-text">No passages yet</p>
@@ -108,6 +119,8 @@ const StudioWorkspace = () => {
       <PreviewPanel />
 
       <SettingsModal />
+
+      <SongSearch open={searching} onClose={() => setSearching(false)} />
     </div>
   );
 };

@@ -60,7 +60,7 @@ const Setlist = ({ onEdit }) => {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-1 flex items-center justify-between px-0.5">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-studio-faint">
-          Set list{items.length > 0 && ` · ${items.length}`}
+          Playlist{items.length > 0 && ` · ${items.length}`}
         </h3>
 
         {items.length > 0 && (
@@ -124,7 +124,7 @@ const Setlist = ({ onEdit }) => {
                   <HiOutlinePencil className="text-sm" />
                 </IconButton>
 
-                <IconButton label={`Remove ${song.title} from the set list`} onClick={() => removeFromSetlist(song.id)}>
+                <IconButton label={`Remove ${song.title} from the playlist`} onClick={() => removeFromSetlist(song.id)}>
                   <HiOutlineX className="text-sm" />
                 </IconButton>
               </span>
