@@ -19,10 +19,15 @@ import OBSWebSocket from 'obs-websocket-js';
  * Nothing is hosted, nothing is polled, and the Browser Source is never
  * reloaded — so the lower third can animate between slides.
  *
- * One constraint shapes the setup: an HTTPS page may not open a `ws://`
- * connection, and obs-websocket speaks only plain `ws://`. The console must
- * therefore be served over http (localhost) to drive OBS. The lower third
- * itself only *receives*, so it can be loaded from the deployed HTTPS site.
+ * One constraint shapes the setup, and it is narrower than it looks:
+ * obs-websocket speaks only plain `ws://`, which an HTTPS page may not open —
+ * *except* to loopback, which mixed-content blocking exempts as a potentially
+ * trustworthy origin. So the deployed HTTPS console drives OBS on the same
+ * machine perfectly well in Chromium and Firefox; it is reaching OBS on
+ * another device that needs either an http console or a `wss://` address in
+ * front of obs-websocket. Safari refuses `ws://` from HTTPS outright, loopback
+ * included. The lower third only *receives*, so it loads from the HTTPS site
+ * either way.
  */
 
 /** Name of the CustomEvent `/lower3rd` listens for on `window`. */
@@ -68,28 +73,50 @@ const hostOf = url => {
   }
 };
 
+/** Collapses the wrapped template literals below into one display line. */
+const oneLine = text => text.replace(/\s+/g, ' ').trim();
+
 /**
- * Why this address cannot work from this page, checked before dialling. Both
- * cases are permanent, and a retry loop against them leaves the operator
- * watching "Connecting…" forever with nothing to act on — which is exactly
- * what opening the deployed site on a phone used to do.
+ * Why this address cannot work from this page, checked before dialling so a
+ * hopeless setup does not sit on "Connecting…" forever with nothing to act on.
+ *
+ * Only one case is certain. Mixed-content blocking exempts loopback — it is a
+ * potentially trustworthy origin — so an HTTPS page opens `ws://127.0.0.1`
+ * quite happily in Chromium and Firefox, and refusing that here broke the
+ * ordinary desktop setup of the deployed console driving OBS on the same
+ * machine. Safari does refuse it, but that cannot be told apart from OBS
+ * simply being closed, so it belongs in `hintFor` after a real attempt.
  */
 const blockedBecause = url => {
   const target = url || DEFAULT_OBS_SETTINGS.url;
 
-  if (window.location.protocol === 'https:' && target.startsWith('ws://')) {
-    return `A page served over HTTPS cannot open a ws:// connection, and obs-websocket speaks no other kind.
-      Open this console over http://localhost on the machine running OBS.`;
-  }
-
-  const host = hostOf(target);
-
-  if (LOOPBACK.has(host) && !LOOPBACK.has(bare(window.location.hostname))) {
-    return `${host} means the device you are reading this on, not the one running OBS. Use that machine's
-      address on your network instead — ws://192.168.1.20:4455, say.`;
+  if (window.location.protocol === 'https:' && target.startsWith('ws://') && !LOOPBACK.has(hostOf(target))) {
+    return oneLine(`A page served over HTTPS can only open a ws:// connection to this device. Point this at
+      wss://, or open the console over http:// on the machine running OBS.`);
   }
 
   return '';
+};
+
+/**
+ * Appended to a failed connection: causes the socket error itself cannot name.
+ * A loopback address is the interesting case, because it is right on the OBS
+ * machine and wrong everywhere else, and the failure looks identical either
+ * way.
+ */
+const hintFor = url => {
+  if (!LOOPBACK.has(hostOf(url || DEFAULT_OBS_SETTINGS.url))) {
+    return '';
+  }
+
+  const safari =
+    window.location.protocol === 'https:'
+      ? ` Safari also refuses a ws:// connection from an
+    HTTPS page, even to this device; Chrome allows it.`
+      : '';
+
+  return oneLine(` This address means the device you are reading this on. If OBS runs on another one, use that
+    machine's address on your network instead — ws://192.168.1.20:4455, say.${safari}`);
 };
 
 let settings = readObsSettings();
@@ -176,7 +203,7 @@ const connect = async () => {
     // No retry: nothing about this changes on its own, and `configureObs`
     // dials again the moment the operator edits the address.
     status = 'error';
-    error = blocked.replace(/\s+/g, ' ');
+    error = blocked;
     publishState();
     return;
   }
@@ -220,7 +247,7 @@ const connect = async () => {
     // schedules its own retry.
     obs = null;
     status = 'error';
-    error = e?.message || 'Could not reach OBS';
+    error = `${e?.message || 'Could not reach OBS'}${hintFor(settings.url)}`;
     publishState();
 
     retryTimer = setTimeout(() => {

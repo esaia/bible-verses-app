@@ -100,8 +100,9 @@ const More = ({ title, children }) => (
 );
 
 const ObsHelpModal = ({ open, onClose, sourceUrl }) => {
-  // The ws:// block only bites a page served over https, so the warning is only
-  // shown to the operator it applies to.
+  // Mixed-content blocking exempts loopback, so an https console drives OBS on
+  // this machine fine — the note is about the cases it does not cover, and is
+  // only shown to the operator it could apply to.
   const insecure = window.location.protocol === 'https:';
 
   return (
@@ -138,10 +139,13 @@ const ObsHelpModal = ({ open, onClose, sourceUrl }) => {
 
         {insecure && (
           <div className="rounded-studio border border-amber-300 bg-amber-50 p-3">
-            <h4 className="text-xs font-semibold text-studio-text">Open this console on localhost</h4>
+            <h4 className="text-xs font-semibold text-studio-text">If OBS is on another device</h4>
             <p className="mt-1 text-xs leading-relaxed text-studio-muted">
-              An <Code>https://</Code> page cannot open the <Code>ws://</Code> connection OBS speaks. Use{' '}
-              <Code>http://localhost:3000/studio</Code>. The projector and the Browser Source are unaffected.
+              This page can open a <Code>ws://</Code> connection to <Code>127.0.0.1</Code> — OBS on this machine — but
+              not to another computer's address, which mixed-content blocking refuses. To run the console from a phone
+              or a second machine, open it over <Code>http://</Code> on your network, or put a <Code>wss://</Code>{' '}
+              endpoint in front of obs-websocket. Safari refuses <Code>ws://</Code> from an <Code>https://</Code> page
+              altogether, loopback included.
             </p>
           </div>
         )}

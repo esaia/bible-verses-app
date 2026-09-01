@@ -119,8 +119,13 @@ Three things about this are easy to break:
   the right number of verses with no text in them. Do not un-stringify it.
 - **The style travels with the content**, because the Browser Source cannot read
   any of the projector keys above.
-- **The console must be served over `http://localhost`** to drive OBS: an HTTPS
-  page cannot open a `ws://` connection and obs-websocket has no TLS.
+- **An HTTPS console can only reach obs-websocket on loopback.** obs-websocket
+  has no TLS, and a `ws://` connection from an HTTPS page is mixed content —
+  but loopback is exempt as a potentially trustworthy origin, so the deployed
+  console drives OBS on the *same machine* fine in Chromium and Firefox.
+  Reaching OBS on another device (a phone as the console, say) needs either an
+  `http://` console on the LAN or a `wss://` endpoint in front of
+  obs-websocket. Safari refuses `ws://` from HTTPS outright, loopback included.
 
 The stream shows **one** language, chosen from the projector's armed set — only
 armed languages are fetched, so the choice is a filter over that set, and a
