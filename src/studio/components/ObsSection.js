@@ -91,7 +91,10 @@ const ObsSection = () => {
                   className={`${field} bg-white`}
                 />
 
-                {obs.status === 'error' && obs.error && (
+                {/* Shown while re-dialling too, not only in the error state:
+                    a retry that keeps failing is still a failure, and the
+                    amber pill on its own explains nothing. */}
+                {obs.status !== 'connected' && obs.error && (
                   <p className="text-[11px] leading-relaxed text-studio-danger">{obs.error}</p>
                 )}
 

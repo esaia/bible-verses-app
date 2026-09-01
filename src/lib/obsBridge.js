@@ -53,6 +53,45 @@ export const readObsSettings = () => {
   }
 };
 
+/** Loopback addresses name the machine the page itself is running on. */
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1']);
+
+/** `location.hostname` keeps the brackets around an IPv6 literal; `URL` does
+ *  too, so both sides are stripped before they are compared. */
+const bare = host => host.replace(/^\[|\]$/g, '');
+
+const hostOf = url => {
+  try {
+    return bare(new URL(url).hostname);
+  } catch (e) {
+    return '';
+  }
+};
+
+/**
+ * Why this address cannot work from this page, checked before dialling. Both
+ * cases are permanent, and a retry loop against them leaves the operator
+ * watching "Connecting…" forever with nothing to act on — which is exactly
+ * what opening the deployed site on a phone used to do.
+ */
+const blockedBecause = url => {
+  const target = url || DEFAULT_OBS_SETTINGS.url;
+
+  if (window.location.protocol === 'https:' && target.startsWith('ws://')) {
+    return `A page served over HTTPS cannot open a ws:// connection, and obs-websocket speaks no other kind.
+      Open this console over http://localhost on the machine running OBS.`;
+  }
+
+  const host = hostOf(target);
+
+  if (LOOPBACK.has(host) && !LOOPBACK.has(bare(window.location.hostname))) {
+    return `${host} means the device you are reading this on, not the one running OBS. Use that machine's
+      address on your network instead — ws://192.168.1.20:4455, say.`;
+  }
+
+  return '';
+};
+
 let settings = readObsSettings();
 let obs = null;
 let status = settings.enabled ? 'connecting' : 'idle';
@@ -131,9 +170,24 @@ const connect = async () => {
     return;
   }
 
+  const blocked = blockedBecause(settings.url);
+
+  if (blocked) {
+    // No retry: nothing about this changes on its own, and `configureObs`
+    // dials again the moment the operator edits the address.
+    status = 'error';
+    error = blocked.replace(/\s+/g, ' ');
+    publishState();
+    return;
+  }
+
   obs = new OBSWebSocket();
+
+  // The previous reason is deliberately kept: `connect` rejecting is followed
+  // by `ConnectionClosed`, which puts the bridge back to 'connecting', and
+  // clearing the message here would leave every failed retry looking like a
+  // first attempt that simply had not finished yet.
   status = 'connecting';
-  error = '';
   publishState();
 
   // A drop is not a failure to report: OBS being closed between services is
