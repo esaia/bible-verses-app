@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStudio, groupVerses } from '../StudioProvider';
 import { plain, verseRef } from '../text';
 import { fitText, refitOnFontLoad } from '../../lib/fitText';
+import { LOCAL_THEME, themeClassName } from '../../data/themes';
+import { loadLocalFile } from '../../lib/localMedia';
 
 const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
@@ -30,6 +32,7 @@ const PreviewPanel = () => {
     projectorFont,
     theme,
     dynamicImage,
+    localImage,
     textAlign,
     langOrder,
     transitionMs,
@@ -46,6 +49,43 @@ const PreviewPanel = () => {
   const textRef = useRef(null);
 
   const [mode, setMode] = useState(() => localStorage.getItem(MODE_KEY) || 'projector');
+
+  /**
+   * A background from this machine has no URL to put in a class or a style, so
+   * the preview mints its own from the stored file — the same picture the
+   * projector is being sent, read straight out of IndexedDB here.
+   */
+  const [localUrl, setLocalUrl] = useState('');
+  const localImageId = localImage?.id;
+
+  useEffect(() => {
+    if (theme !== LOCAL_THEME || !localImageId) {
+      setLocalUrl('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    let url = '';
+
+    loadLocalFile(localImageId)
+      .then(record => {
+        if (cancelled || !record?.file) {
+          return;
+        }
+
+        url = URL.createObjectURL(record.file);
+        setLocalUrl(url);
+      })
+      .catch(() => setLocalUrl(''));
+
+    return () => {
+      cancelled = true;
+
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [theme, localImageId]);
 
   // The lower third is authored at 1920x1080 and scaled down to whatever width
   // the rail happens to be, so the preview has to know its own size.
@@ -149,12 +189,19 @@ const PreviewPanel = () => {
     };
   });
 
+  // A pasted URL and one of the operator's own pictures are both drawn as an
+  // inline background; the stock themes stay on their Tailwind class.
+  const backgroundUrl = (theme === LOCAL_THEME && localUrl) || (theme === 'dynamicIMG' && dynamicImage) || '';
+
   const rows = displayed.rows;
   const hasContent = Boolean(displayed.lyrics) || rows.some(row => row.items.length > 0);
 
   return (
     <div className="shrink-0 border-b border-studio-border">
-      <div className="flex h-9 items-center justify-between gap-2 px-2">
+      {/* Dark, like the floating preview it replaced: the bar reads as the edge
+          of the output rather than as more console furniture, and the screen
+          under it is not fighting a white strip. */}
+      <div className="flex h-9 items-center justify-between gap-2 bg-studio-bar px-2">
         <div className="flex items-center gap-0.5">
           {MODES.map(item => (
             <button
@@ -164,19 +211,15 @@ const PreviewPanel = () => {
               onClick={() => setMode(item.value)}
               className={`rounded-[4px] px-2 py-1 text-[11px] font-medium transition-colors duration-150
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
-                ${
-                  mode === item.value
-                    ? 'bg-studio-surface text-studio-text'
-                    : 'text-studio-muted hover:bg-studio-surface hover:text-studio-text'
-                }`}
+                ${mode === item.value ? 'bg-white/20 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
             >
               {item.label}
             </button>
           ))}
         </div>
 
-        <span className="flex items-center gap-1.5 pr-1 text-[10px] font-semibold tracking-wide text-studio-muted">
-          <span className={`h-1.5 w-1.5 rounded-full ${hasContent ? 'bg-studio-live' : 'bg-studio-border'}`} />
+        <span className="flex items-center gap-1.5 pr-1 text-[10px] font-semibold tracking-wide text-white/80">
+          <span className={`h-1.5 w-1.5 rounded-full ${hasContent ? 'bg-studio-live' : 'bg-white/30'}`} />
           {hasContent ? 'LIVE' : 'IDLE'}
         </span>
       </div>
@@ -208,8 +251,8 @@ const PreviewPanel = () => {
         <div
           ref={screenRef}
           className={`relative aspect-video w-full overflow-hidden bg-blend-overlay bgblind showbackground
-            ${theme === 'dynamicIMG' ? '' : `bg-${theme}img`}`}
-          style={theme === 'dynamicIMG' && dynamicImage ? { backgroundImage: `url(${dynamicImage})` } : undefined}
+            ${theme === 'dynamicIMG' || theme === LOCAL_THEME ? '' : themeClassName(theme)}`}
+          style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})` } : undefined}
         >
           <div
             className="flex h-full w-full items-center justify-center px-[6%]"
