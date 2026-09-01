@@ -25,11 +25,11 @@ const AppBar = () => {
         <span className="text-sm font-semibold text-studio-text">Bible Presenter</span>
         <span className="hidden text-xs text-studio-faint sm:inline">Studio</span>
         <span
-          title="Test mode — this console is still being built, so expect the odd bug. Keep the classic view handy."
+          title="Beta — this console is still being built, so expect the odd bug. Keep the classic view handy."
           className="flex shrink-0 items-center gap-1.5 text-[11px] text-studio-faint"
         >
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-          TEST MODE
+          BETA
         </span>
       </div>
 
