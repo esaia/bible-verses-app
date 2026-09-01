@@ -1,11 +1,43 @@
 import { useState, useSyncExternalStore } from 'react';
-import { MdCheck, MdContentCopy, MdRefresh } from 'react-icons/md';
+import {
+  MdCheck,
+  MdContentCopy,
+  MdOutlineDesktopWindows,
+  MdOutlinePhoneIphone,
+  MdOutlineVideocam,
+  MdRefresh,
+} from 'react-icons/md';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { Field } from './StyleSection';
 import { CopyField } from './ObsHelpModal';
 import { useStudio } from '../StudioProvider';
 import { getRelayState, newRoom, subscribeRelayState, validRoom } from '../../lib/relay';
+
+/**
+ * What the room should contain, and what each one being absent means. Before
+ * this the only way to know whether OBS had actually connected was to go and
+ * look at OBS.
+ */
+const OUTPUTS = [
+  { role: 'show', label: 'Projector', Icon: MdOutlineDesktopWindows, hint: 'Open the Screen link on that machine.' },
+  { role: 'lower3rd', label: 'Stream', Icon: MdOutlineVideocam, hint: 'Paste the OBS link into a Browser Source.' },
+  {
+    role: 'console',
+    label: 'Consoles',
+    Icon: MdOutlinePhoneIphone,
+    hint: 'This one. Open the Phone link to add another.',
+  },
+];
+
+/** Consoles are counted; an output is simply there or not. */
+const countLabel = (role, count) => {
+  if (role === 'console') {
+    return count === 1 ? 'Just this one' : `${count} connected`;
+  }
+
+  return count > 0 ? 'Connected' : 'Not yet';
+};
 
 const STATUS = {
   idle: { label: 'Off', tone: 'bg-studio-border' },
@@ -77,6 +109,36 @@ const DevicesSection = () => {
                 No relay is configured in this build, so the projector and stream only follow a console in this browser.
               </p>
             )}
+          </div>
+        </Field>
+
+        <Field label="Connected" hint="Live from the room itself, so it says what is really there.">
+          <div className="overflow-hidden rounded-studio border border-studio-border">
+            {OUTPUTS.map(({ role, label, Icon, hint }) => {
+              // The console counts itself, so a lone operator reads 1 here and
+              // 2 once a phone joins; the outputs are simply on or off.
+              const count = relay.peers?.[role] || 0;
+
+              return (
+                <div
+                  key={role}
+                  className="flex items-center gap-2 border-b border-studio-divider px-2.5 py-2 last:border-b-0"
+                >
+                  <Icon className={`shrink-0 text-base ${count > 0 ? 'text-studio-text' : 'text-studio-faint'}`} />
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium text-studio-text">{label}</span>
+                    {count === 0 && <span className="block text-[11px] text-studio-faint">{hint}</span>}
+                  </span>
+
+                  <span
+                    className={`shrink-0 text-[11px] font-medium ${count > 0 ? 'text-studio-go' : 'text-studio-faint'}`}
+                  >
+                    {countLabel(role, count)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </Field>
 

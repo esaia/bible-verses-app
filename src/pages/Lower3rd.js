@@ -225,7 +225,7 @@ const Lower3rd = () => {
       return undefined;
     }
 
-    startRelay(room);
+    startRelay(room, 'lower3rd');
 
     const off = onRelayMessage(payload => {
       if (!payload?.showData) {

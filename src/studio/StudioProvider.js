@@ -269,7 +269,7 @@ const StudioProvider = ({ children }) => {
     followingRef.current = false;
     seededRef.current = false;
 
-    startRelay(room);
+    startRelay(room, 'console');
 
     // A room that already has a console running replays its slide within a
     // moment of connecting. Only when none comes back is this console the

@@ -37,6 +37,14 @@ const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 15000;
 
 /**
+ * Keepalive. A tab that navigates away or a Browser Source whose process dies
+ * sends no close frame, so the room would go on listing it; this is how it
+ * finds out. The relay answers these itself without waking the room, so they
+ * are cheap. Comfortably inside the relay's staleness window.
+ */
+const PING_MS = 25000;
+
+/**
  * 36^16 is about 8e24 codes. Collision between two churches is not a practical
  * concern, but the code does gate access to a room, so it is generated from
  * the CSPRNG rather than from `Math.random`.
@@ -94,8 +102,10 @@ export const ensureRoom = () => {
 
 let socket = null;
 let room = null;
+let role = 'console';
 let retryTimer = null;
 let retryMs = RETRY_MIN_MS;
+let pingTimer = null;
 
 // The last thing the console asked to publish. Held so a push that happens
 // while the socket is down is not simply lost: it is sent on connect, which is
@@ -108,10 +118,15 @@ let error = '';
 const messageListeners = new Set();
 const stateListeners = new Set();
 
-let state = { status, error, room: null, configured: relayConfigured };
+// Who else is in the room, as counts per role. The console shows it, because
+// "is the Browser Source actually connected?" was otherwise unanswerable
+// without going and looking at OBS.
+let peers = {};
+
+let state = { status, error, room: null, configured: relayConfigured, peers };
 
 const publishState = () => {
-  state = { status, error, room, configured: relayConfigured };
+  state = { status, error, room, configured: relayConfigured, peers };
   stateListeners.forEach(listener => listener());
 };
 
@@ -145,13 +160,24 @@ const open = () => {
   status = 'connecting';
   publishState();
 
-  socket = new WebSocket(`${RELAY_URL.replace(/\/+$/, '')}/${room}`);
+  socket = new WebSocket(`${RELAY_URL.replace(/\/+$/, '')}/${room}?role=${role}`);
 
   socket.onopen = () => {
     status = 'connected';
     error = '';
     retryMs = RETRY_MIN_MS;
     publishState();
+
+    clearInterval(pingTimer);
+    pingTimer = setInterval(() => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        try {
+          socket.send('ping');
+        } catch (e) {
+          // The close handler will pick this up.
+        }
+      }
+    }, PING_MS);
 
     if (pending) {
       send(pending);
@@ -167,6 +193,14 @@ const open = () => {
       return;
     }
 
+    // Presence is about the room, not about what is on screen, so it updates
+    // state rather than reaching the slide listeners.
+    if (payload?.type === 'presence') {
+      peers = payload.roles || {};
+      publishState();
+      return;
+    }
+
     messageListeners.forEach(listener => listener(payload));
   };
 
@@ -176,6 +210,9 @@ const open = () => {
 
   socket.onclose = () => {
     socket = null;
+    peers = {};
+    clearInterval(pingTimer);
+    pingTimer = null;
 
     if (!room) {
       status = 'idle';
@@ -192,24 +229,28 @@ const open = () => {
 };
 
 /**
- * Join a room. Safe to call repeatedly with the same room — the socket is
- * shared, so the console publishing and a `/show` tab subscribing in the same
- * browser use one connection.
+ * Join a room as `console`, `show` or `lower3rd`. Safe to call repeatedly with
+ * the same room — the socket is shared, so the console publishing and a
+ * `/show` tab subscribing in the same browser use one connection.
  */
-export const startRelay = nextRoom => {
+export const startRelay = (nextRoom, nextRole = 'console') => {
   if (!relayConfigured || !validRoom(nextRoom) || nextRoom === room) {
     return;
   }
 
   stopRelay();
   room = nextRoom;
+  role = nextRole;
   open();
 };
 
 export const stopRelay = () => {
   clearTimeout(retryTimer);
+  clearInterval(pingTimer);
   retryTimer = null;
+  pingTimer = null;
   room = null;
+  peers = {};
   retryMs = RETRY_MIN_MS;
 
   const current = socket;

@@ -122,7 +122,7 @@ const Show = () => {
       return undefined;
     }
 
-    startRelay(room);
+    startRelay(room, 'show');
 
     const off = onRelayMessage(payload => {
       if (!payload?.showData) {
