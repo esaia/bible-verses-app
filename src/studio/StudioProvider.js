@@ -3,7 +3,7 @@ import { versionsByLang } from '../data/bible';
 import useChapter, { LANGS } from './useChapter';
 import { TRANSITION_KEY, clampTransition, readTransition } from '../lib/transition';
 import { pushObs } from '../lib/obsBridge';
-import { ensureRoom, publishRelay, startRelay, stopRelay, writeRoom } from '../lib/relay';
+import { adoptRelay, ensureRoom, onRelayMessage, publishRelay, startRelay, stopRelay, writeRoom } from '../lib/relay';
 
 const StudioContext = createContext(null);
 
@@ -239,12 +239,26 @@ const StudioProvider = ({ children }) => {
   const obsStyleRef = useRef(obsStyle);
   const projectorStyleRef = useRef(projectorStyle);
 
+  // Set once this console has taken a slide from the room, which is what makes
+  // it stop treating its own last slide as the live one.
+  const followingRef = useRef(false);
+
+  // Cleared until the room has had its chance to say what is already live, so
+  // that opening or reloading a console cannot announce a stale slide.
+  const seededRef = useRef(false);
+
   useEffect(() => {
     obsStyleRef.current = obsStyle;
     projectorStyleRef.current = projectorStyle;
 
     pushObs({ showData: lastShowRef.current, style: obsStyle });
-    publishRelay({ showData: lastShowRef.current, style: obsStyle, projector: projectorStyle });
+
+    // Only once this console is the one driving. Restyling must not be a way
+    // for an idle console to shove its own stale slide back over whatever
+    // another one has put on screen.
+    if (seededRef.current && !followingRef.current) {
+      publishRelay({ showData: lastShowRef.current, style: obsStyle, projector: projectorStyle });
+    }
   }, [obsStyle, projectorStyle]);
 
   // The room this console publishes into. Created on first run so there is
@@ -252,10 +266,62 @@ const StudioProvider = ({ children }) => {
   const [room, setRoomState] = useState(ensureRoom);
 
   useEffect(() => {
+    followingRef.current = false;
+    seededRef.current = false;
+
     startRelay(room);
 
-    return () => stopRelay();
+    // A room that already has a console running replays its slide within a
+    // moment of connecting. Only when none comes back is this console the
+    // first one in, and only then may it seed the room from its own storage —
+    // which is what still lets a lone operator open the console and find the
+    // last slide back on the projector.
+    const seed = setTimeout(() => {
+      seededRef.current = true;
+
+      if (!followingRef.current) {
+        publishRelay({
+          showData: lastShowRef.current,
+          style: obsStyleRef.current,
+          projector: projectorStyleRef.current,
+        });
+      }
+    }, 1500);
+
+    return () => {
+      clearTimeout(seed);
+      stopRelay();
+    };
   }, [room]);
+
+  /**
+   * A room can hold more than one console — a phone and the desk machine —
+   * so a console has to follow the room as well as publish into it. Without
+   * this it goes on believing its own last slide is live and pushes it back
+   * over the other console's, on the next restyle, OBS heartbeat or reconnect.
+   *
+   * The slide is adopted rather than echoed: sending it on would have the two
+   * consoles trading the same payload forever.
+   */
+  useEffect(() => {
+    const off = onRelayMessage(payload => {
+      if (!payload?.showData || JSON.stringify(payload.showData) === JSON.stringify(lastShowRef.current)) {
+        return;
+      }
+
+      followingRef.current = true;
+      lastShowRef.current = payload.showData;
+      adoptRelay(payload);
+      write('showData', payload.showData);
+
+      // Keeps a projector tab and an obs-websocket Browser Source on this
+      // machine in step, whichever console is actually driving. The incoming
+      // style wins, so both routes into OBS agree.
+      pushObs({ showData: payload.showData, style: payload.style || obsStyleRef.current });
+    });
+
+    return off;
+  }, []);
 
   /** Join another room, or hand this one a fresh code. */
   const setRoom = useCallback(next => {
@@ -269,6 +335,10 @@ const StudioProvider = ({ children }) => {
    * not connected, so the projector path behaves exactly as it always has.
    */
   const pushShow = useCallback(payload => {
+    // An operator acting here means this console is driving, whatever the
+    // room was doing a moment ago.
+    followingRef.current = false;
+    seededRef.current = true;
     lastShowRef.current = payload;
     write('showData', payload);
     pushObs({ showData: payload, style: obsStyleRef.current });

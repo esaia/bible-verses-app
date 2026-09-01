@@ -237,6 +237,15 @@ export const onRelayMessage = listener => {
   return () => messageListeners.delete(listener);
 };
 
+/**
+ * Take an incoming payload as the current one without sending it back. A
+ * console that has adopted another console's slide must not resend its own
+ * stale one when the socket next reconnects.
+ */
+export const adoptRelay = payload => {
+  pending = payload;
+};
+
 /** Called by the console. Queued when the socket is down, sent on connect. */
 export const publishRelay = payload => {
   pending = payload;
