@@ -310,12 +310,16 @@
   --l3-shadow: 0 2px 14px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
-/* Broadcast bands: each line of text sits on its own plate, centred, with the
-   bar itself carrying nothing — the plates are the graphic. Two colourways
-   share all the mechanics and differ only in the plate and ink. */
+/* Broadcast bands: each line of text sits on its own plate running the full
+   width of the frame, with the bar itself carrying nothing — the plates are
+   the graphic. Two colourways share all the mechanics and differ only in the
+   plate and ink. The bar gives up its side padding so the plates can reach
+   both edges; the text keeps its own inset instead. */
 .lower3rd-bar--bands,
 .lower3rd-bar--bandsdark {
   background: none;
+  padding-left: 0;
+  padding-right: 0;
   --l3-shadow: none;
 }
 
@@ -331,33 +335,51 @@
   --l3-plate: rgba(10, 12, 16, 0.86);
 }
 
-/* The plate rides on the text itself, not the block, with the decoration
-   cloned across line boxes — so a verse that wraps gets one plate per line
-   that hugs the words, the way a broadcast subtitle does, instead of a single
-   full-width slab. */
-.lower3rd-bar--bands .lower3rd-text,
-.lower3rd-bar--bands .lower3rd-ref,
-.lower3rd-bar--bandsdark .lower3rd-text,
-.lower3rd-bar--bandsdark .lower3rd-ref {
-  display: inline;
-  background: var(--l3-plate);
-  padding: 0.1em 0.45em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
-/* The plate's height comes from the font's em box plus its padding, not from
-   line-height, so line-height alone sets the gap between stacked plates: it
-   wants to clear roughly 1.35em of plate and no more, or the lines drift apart
-   and stop reading as one block. */
+/* One plate per line box, drawn as a repeating stripe on the block rather than
+   as a background on the text, which is what lets a plate run edge to edge
+   while an inline one could only ever be as wide as its words. The stripe's
+   period is the line-height, so it lands on the line boxes whatever the text
+   says; the leading left over at each end of the period is the gap between
+   plates, and starting the stripe inside it keeps the words centred on their
+   own plate. The inset is a percentage, not vw, so the style picker's tiles
+   scale it with them. */
 .lower3rd-bar--bands .lower3rd-text,
 .lower3rd-bar--bandsdark .lower3rd-text {
+  display: block;
   line-height: 1.5;
+  padding: 0 6%;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 0.08em,
+    var(--l3-plate) 0.08em,
+    var(--l3-plate) 1.42em,
+    transparent 1.42em,
+    transparent 1.5em
+  );
 }
 
 .lower3rd-bar--bands .lower3rd-ref,
 .lower3rd-bar--bandsdark .lower3rd-ref {
+  display: block;
   line-height: 1.8;
+  padding: 0 6%;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 0.16em,
+    var(--l3-plate) 0.16em,
+    var(--l3-plate) 1.64em,
+    transparent 1.64em,
+    transparent 1.8em
+  );
+}
+
+/* The reference is its own full-width plate now, so it no longer needs the
+   inline-block shrink-to-fit the other looks rely on. */
+.lower3rd-bar--bands .lower3rd-refline,
+.lower3rd-bar--bandsdark .lower3rd-refline {
+  margin-top: 0.16em;
 }
 
 .lower3rd-refline {
@@ -587,6 +609,15 @@
 
 .l3-preview .lower3rd-bar--top {
   padding: 9% 8% 7%;
+}
+
+/* The tile's own padding is more specific than the variant's, so the bands
+   have to give theirs up again here or the plates stop short of the edges in
+   the picker while running full width on the stream. */
+.l3-preview .lower3rd-bar--bands,
+.l3-preview .lower3rd-bar--bandsdark {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .l3-preview .lower3rd-bar--split {
