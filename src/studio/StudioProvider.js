@@ -167,7 +167,10 @@ const StudioProvider = ({ children }) => {
   useEffect(() => localStorage.setItem('lowerThirdVariant', lowerThirdVariant), [lowerThirdVariant]);
   useEffect(() => localStorage.setItem('lyricsVariant', lyricsVariant), [lyricsVariant]);
   useEffect(() => localStorage.setItem('obsHidden', obsHidden ? '1' : '0'), [obsHidden]);
-  useEffect(() => localStorage.setItem('lowerThirdLanguage', streamLang), [streamLang]);
+  useEffect(() => {
+    streamLangRef.current = streamLang;
+    localStorage.setItem('lowerThirdLanguage', streamLang);
+  }, [streamLang]);
 
   /**
    * Everything `/lower3rd` needs to draw a slide. The OBS Browser Source has
@@ -247,19 +250,40 @@ const StudioProvider = ({ children }) => {
   // that opening or reloading a console cannot announce a stale slide.
   const seededRef = useRef(false);
 
+  /**
+   * The last payload seen on the wire, sent or received.
+   *
+   * Publishing is gated on differing from it, which is what keeps two consoles
+   * from arguing. Every publish carries the whole look, so a console that has
+   * not caught up re-asserts its own settings the next time it does anything
+   * at all — pressing the arrow key was enough to drag the stream language
+   * back. Adopting a payload records it here, so applying it cannot echo, and
+   * a genuine local change still differs and still goes out.
+   */
+  const lastWireRef = useRef(null);
+
+  const streamLangRef = useRef(streamLang);
+
+  const publishWire = useCallback(payload => {
+    if (JSON.stringify(payload) === JSON.stringify(lastWireRef.current)) {
+      return;
+    }
+
+    lastWireRef.current = payload;
+    publishRelay(payload);
+  }, []);
+
   useEffect(() => {
     obsStyleRef.current = obsStyle;
     projectorStyleRef.current = projectorStyle;
 
     pushObs({ showData: lastShowRef.current, style: obsStyle });
 
-    // Only once this console is the one driving. Restyling must not be a way
-    // for an idle console to shove its own stale slide back over whatever
-    // another one has put on screen.
-    if (seededRef.current && !followingRef.current) {
-      publishRelay({ showData: lastShowRef.current, style: obsStyle, projector: projectorStyle });
+    // Not before the room has had its say; after that, anything genuinely new.
+    if (seededRef.current) {
+      publishWire({ showData: lastShowRef.current, style: obsStyle, projector: projectorStyle, streamLang });
     }
-  }, [obsStyle, projectorStyle]);
+  }, [obsStyle, projectorStyle, streamLang, publishWire]);
 
   // The room this console publishes into. Created on first run so there is
   // nothing to set up; `?room=` carries a phone into an existing one.
@@ -280,10 +304,11 @@ const StudioProvider = ({ children }) => {
       seededRef.current = true;
 
       if (!followingRef.current) {
-        publishRelay({
+        publishWire({
           showData: lastShowRef.current,
           style: obsStyleRef.current,
           projector: projectorStyleRef.current,
+          streamLang: streamLangRef.current,
         });
       }
     }, 1500);
@@ -292,7 +317,7 @@ const StudioProvider = ({ children }) => {
       clearTimeout(seed);
       stopRelay();
     };
-  }, [room]);
+  }, [room, publishWire]);
 
   /**
    * A room can hold more than one console — a phone and the desk machine —
@@ -305,19 +330,60 @@ const StudioProvider = ({ children }) => {
    */
   useEffect(() => {
     const off = onRelayMessage(payload => {
-      if (!payload?.showData || JSON.stringify(payload.showData) === JSON.stringify(lastShowRef.current)) {
+      if (!payload?.showData) {
         return;
       }
 
       followingRef.current = true;
-      lastShowRef.current = payload.showData;
+      lastWireRef.current = payload;
       adoptRelay(payload);
-      write('showData', payload.showData);
+
+      if (JSON.stringify(payload.showData) !== JSON.stringify(lastShowRef.current)) {
+        lastShowRef.current = payload.showData;
+        write('showData', payload.showData);
+      }
 
       // Keeps a projector tab and an obs-websocket Browser Source on this
       // machine in step, whichever console is actually driving. The incoming
       // style wins, so both routes into OBS agree.
       pushObs({ showData: payload.showData, style: payload.style || obsStyleRef.current });
+
+      // The look belongs to the service, not to the device showing it. Two
+      // consoles that disagree about it would take turns overwriting each
+      // other, which is what made a language chosen on a phone snap back the
+      // moment the other console touched anything.
+      const { projector, style, streamLang: incomingLang } = payload;
+
+      if (projector) {
+        setTheme(projector.theme || '1');
+        setDynamicImage(projector.dynamicImage || '');
+        setProjectorFont(projector.font || 'font-banner');
+        setTextAlign(projector.align || 'left');
+        setLyricsFont(projector.lyricsFont || projector.font || 'font-banner');
+        setLyricsAlign(projector.lyricsAlign || projector.align || 'left');
+        setTransitionMsState(clampTransition(projector.transitionMs));
+
+        // Objects arrive with a fresh identity every time, so they are only
+        // taken when the contents actually moved — otherwise every push would
+        // invalidate the memos that decide what to publish next.
+        setLangOrder(current =>
+          JSON.stringify(current) === JSON.stringify(projector.order) ? current : projector.order,
+        );
+        setEnabled(current =>
+          JSON.stringify(current) === JSON.stringify(projector.enabled) ? current : projector.enabled,
+        );
+      }
+
+      if (style) {
+        setLowerThirdPosition(style.position || 'bottom');
+        setLowerThirdVariant(style.variant || 'scrim');
+        setLyricsVariant(style.lyricsVariant || 'scrim');
+        setObsHidden(Boolean(style.hidden));
+      }
+
+      if (incomingLang) {
+        setStreamLang(incomingLang);
+      }
     });
 
     return off;
@@ -334,16 +400,24 @@ const StudioProvider = ({ children }) => {
    * the OBS bridge for the Browser Source. The bridge is a no-op when OBS is
    * not connected, so the projector path behaves exactly as it always has.
    */
-  const pushShow = useCallback(payload => {
-    // An operator acting here means this console is driving, whatever the
-    // room was doing a moment ago.
-    followingRef.current = false;
-    seededRef.current = true;
-    lastShowRef.current = payload;
-    write('showData', payload);
-    pushObs({ showData: payload, style: obsStyleRef.current });
-    publishRelay({ showData: payload, style: obsStyleRef.current, projector: projectorStyleRef.current });
-  }, []);
+  const pushShow = useCallback(
+    payload => {
+      // An operator acting here means this console is driving, whatever the
+      // room was doing a moment ago.
+      followingRef.current = false;
+      seededRef.current = true;
+      lastShowRef.current = payload;
+      write('showData', payload);
+      pushObs({ showData: payload, style: obsStyleRef.current });
+      publishWire({
+        showData: payload,
+        style: obsStyleRef.current,
+        projector: projectorStyleRef.current,
+        streamLang: streamLangRef.current,
+      });
+    },
+    [publishWire],
+  );
 
   /** Languages to fetch: everything armed for the projector, plus the admin
    *  language, whose text the verse cards are printed from. */
