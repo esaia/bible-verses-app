@@ -1,0 +1,45 @@
+{
+  "site": {
+    "url": "https://bibleversesgeo.netlify.app",
+    "name": "Bible Presenter",
+    "image": "/og-image.jpg",
+    "imageAlt": "John 3:16 in Georgian and English on a dark projector slide, above the words ქართული · English · Русский"
+  },
+  "pages": {
+    "/": {
+      "title": "Bible Presenter — Georgian, English and Russian verses on the projector",
+      "shareTitle": "Bible Presenter — verses on the projector, in three languages at once",
+      "description": "Put a Bible verse on the projector in Georgian, English and Russian at once. Pick book, chapter and verse on one screen, press Show, and the second screen follows — plus lyrics, a stream lower third, and 20 backgrounds. Free, no sign-up."
+    },
+    "/studio": {
+      "title": "Studio — one console for the whole service | Bible Presenter",
+      "shareTitle": "Bible Presenter Studio — one console for the whole service",
+      "description": "Passages, song lyrics and the playlist in one window, sent to the projector and to the OBS stream at the same time. Search the library with ⌘F, build a playlist, and drive a broadcast lower third.",
+      "image": "/og-studio.jpg",
+      "imageAlt": "The Bible Presenter studio console: Bible, Lyrics, Playlist and OBS lower third, beside a screen carrying a Georgian verse",
+      "noindex": true
+    },
+    "/bible": {
+      "title": "Read a chapter — Bible Presenter",
+      "description": "Read a whole chapter in Georgian, English or Russian, in any of the translations the projector can show."
+    },
+    "/doc": {
+      "title": "How to run a service with it — Bible Presenter",
+      "description": "Setting up the operator window and the projector window, choosing translations, and what the green and blue checkboxes do. In Georgian and English."
+    },
+    "/donation": {
+      "title": "Support the project — Bible Presenter",
+      "description": "Bible Presenter is free. If it helps your church, here is how to help keep it running."
+    },
+    "/show": {
+      "title": "Projector — Bible Presenter",
+      "description": "The projector output. It shows whatever the operator window last sent, and is meant for a second screen.",
+      "noindex": true
+    },
+    "/lower3rd": {
+      "title": "Lower third — Bible Presenter",
+      "description": "The OBS browser source. It draws the live slide as a broadcast lower third over a transparent background.",
+      "noindex": true
+    }
+  }
+}

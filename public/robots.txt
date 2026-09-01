@@ -3,12 +3,14 @@
 User-agent: *
 Allow: /
 
-# Output surfaces, not pages: /show is the projector canvas, /lower3rd is the
-# OBS browser source, and /studio is the operator console. None of them mean
-# anything without the operator window that drives them, and all three carry a
-# noindex tag of their own (see src/lib/useSeo.js) for anything already indexed.
+# Output surfaces, not pages: /show is the projector canvas and /lower3rd is
+# the OBS browser source. Neither means anything without the window driving it.
 Disallow: /show
 Disallow: /lower3rd
-Disallow: /studio
+
+# /studio stays crawlable on purpose. The card crawlers — Facebook's among
+# them — honour this file, and a disallowed page gets no link preview at all.
+# It carries noindex in its own head instead, so it is shareable without
+# turning up in results.
 
 Sitemap: https://bibleversesgeo.netlify.app/sitemap.xml
