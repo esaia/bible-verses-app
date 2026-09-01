@@ -1,3 +1,14 @@
 # https://www.robotstxt.org/robotstxt.html
+
 User-agent: *
-Disallow:
+Allow: /
+
+# Output surfaces, not pages: /show is the projector canvas, /lower3rd is the
+# OBS browser source, and /studio is the operator console. None of them mean
+# anything without the operator window that drives them, and all three carry a
+# noindex tag of their own (see src/lib/useSeo.js) for anything already indexed.
+Disallow: /show
+Disallow: /lower3rd
+Disallow: /studio
+
+Sitemap: https://bibleversesgeo.netlify.app/sitemap.xml

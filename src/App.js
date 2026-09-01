@@ -8,10 +8,13 @@ import Donate from './pages/Donate';
 import Bible from './pages/Bible';
 import Studio from './pages/Studio';
 import Lower3rd from './pages/Lower3rd';
+import useSeo from './lib/useSeo';
 
 function App() {
   const { darkMode } = useBibleSettingContext();
   const { fontTitle } = useData();
+
+  useSeo();
 
   return (
     <div>

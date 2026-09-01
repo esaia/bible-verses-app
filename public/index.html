@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -7,16 +7,68 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Web site created using create-react-app" />
+    <meta name="theme-color" content="#101828" />
 
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Bible verses application" />
+    <title>Bible Presenter — Georgian, English and Russian verses on the projector</title>
     <meta
-      property="og:description"
-      content="Display Bible verses on projector screens for church services. Easy-to-use web app for worship presentations. Share scripture clearly with your congregation in real-time."
+      name="description"
+      content="Put a Bible verse on the projector in Georgian, English and Russian at once. Pick book, chapter and verse on one screen, press Show, and the second screen follows — plus lyrics, a stream lower third, and 20 backgrounds. Free, no sign-up."
     />
 
-    <title>Bible verses application</title>
+    <!-- The app is a single-page app served from index.html on every route, so
+         these tags describe the app as a whole. `src/lib/useSeo.js` rewrites
+         the title, description and canonical per route once React is up. -->
+    <link rel="canonical" href="https://bibleversesgeo.netlify.app/" />
+    <meta name="robots" content="index, follow" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bible Presenter" />
+    <meta property="og:url" content="https://bibleversesgeo.netlify.app/" />
+    <meta property="og:title" content="Bible Presenter — verses on the projector, in three languages at once" />
+    <meta
+      property="og:description"
+      content="Pick book, chapter and verse on one screen, press Show, and the projector follows. Georgian, English and Russian side by side, song lyrics, and a lower third for the stream."
+    />
+    <meta property="og:image" content="https://bibleversesgeo.netlify.app/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="John 3:16 in Georgian and English on a dark projector slide, above the words ქართული · English · Русский"
+    />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ka_GE" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Bible Presenter — verses on the projector, in three languages at once" />
+    <meta
+      name="twitter:description"
+      content="Pick book, chapter and verse on one screen, press Show, and the projector follows. Georgian, English and Russian side by side, song lyrics, and a lower third for the stream."
+    />
+    <meta name="twitter:image" content="https://bibleversesgeo.netlify.app/og-image.jpg" />
+
+    <!-- Search engines render this as a rich result for the app itself; the
+         offers block is what marks it free rather than a trial. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Bible Presenter",
+        "url": "https://bibleversesgeo.netlify.app/",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any browser",
+        "browserRequirements": "Requires JavaScript",
+        "description": "Display Bible verses on a projector during church services in Georgian, English and Russian at once, with song lyrics and an OBS lower third for the stream.",
+        "inLanguage": ["ka", "en", "ru"],
+        "image": "https://bibleversesgeo.netlify.app/og-image.jpg",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
