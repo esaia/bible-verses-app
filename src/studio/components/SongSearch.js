@@ -2,27 +2,55 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { HiOutlineSearch } from 'react-icons/hi';
 import { useStudio } from '../StudioProvider';
 import { songDragProps } from './Setlist';
+import { normalizeName, transliterate } from '../../lib/passage';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
 
 /** The shortcut as this platform writes it, for the hint in the library header. */
 export const SEARCH_HINT = isMac ? '⌘F' : 'Ctrl F';
 
-/** Title first, then anything a slide says — so a half-remembered line finds the song. */
-const matchOf = (song, needle) => {
-  const title = song.title.toLowerCase();
+/**
+ * Both spellings of a string: as written, and transliterated into Latin — the
+ * same pair the book search indexes on, so “ami” finds ამის… without switching
+ * the keyboard to Georgian.
+ */
+const keysOf = value => {
+  const normalized = normalizeName(value);
 
-  if (title.startsWith(needle)) {
+  return [normalized, normalizeName(transliterate(normalized))];
+};
+
+/**
+ * Everything a song can be found by, built once per library rather than per
+ * keystroke: the title, and every line of every slide so a half-remembered
+ * phrase finds the song it belongs to.
+ */
+const indexOf = songs =>
+  songs.map(song => ({
+    song,
+    keys: keysOf(song.title),
+    lines: song.slides
+      .flatMap(slide => slide.text.split('\n'))
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => ({ line, keys: keysOf(line) })),
+  }));
+
+/** Title prefix, then title substring, then a line of the lyrics. */
+const matchOf = (entry, probes) => {
+  const hit = test => entry.keys.some(key => probes.some(probe => test(key, probe)));
+
+  if (hit((key, probe) => key.startsWith(probe))) {
     return { rank: 0 };
   }
 
-  if (title.includes(needle)) {
+  if (hit((key, probe) => key.includes(probe))) {
     return { rank: 1 };
   }
 
-  const line = song.slides.flatMap(slide => slide.text.split('\n')).find(text => text.toLowerCase().includes(needle));
+  const found = entry.lines.find(({ keys }) => keys.some(key => probes.some(probe => key.includes(probe))));
 
-  return line ? { rank: 2, line: line.trim() } : null;
+  return found ? { rank: 2, line: found.line } : null;
 };
 
 /**
@@ -51,22 +79,28 @@ const SongSearch = ({ open, onClose }) => {
   const listRef = useRef(null);
   const cardRef = useRef(null);
 
+  const index = useMemo(() => indexOf(songs), [songs]);
+
   const results = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = normalizeName(query);
 
     if (!needle) {
       return songs.map(song => ({ song }));
     }
 
-    return songs
-      .map(song => {
-        const match = matchOf(song, needle);
+    // A Latin query stays itself; a Georgian one is folded to Latin too, so
+    // either keyboard reaches either spelling of the library.
+    const probes = [...new Set([needle, normalizeName(transliterate(needle))])];
 
-        return match && { song, ...match };
+    return index
+      .map(entry => {
+        const match = matchOf(entry, probes);
+
+        return match && { song: entry.song, ...match };
       })
       .filter(Boolean)
       .sort((a, b) => a.rank - b.rank || a.song.title.localeCompare(b.song.title));
-  }, [query, songs]);
+  }, [index, query, songs]);
 
   useEffect(() => {
     if (open) {
