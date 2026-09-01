@@ -4,6 +4,7 @@ import TextShow from '../components/result-versions/TextShow';
 import { fitText, refitOnFontLoad } from '../lib/fitText';
 import { themeClassName } from '../data/themes';
 import { readTransition } from '../lib/transition';
+import { onRelayMessage, readRoom, startRelay, stopRelay } from '../lib/relay';
 
 const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
@@ -39,6 +40,7 @@ const Show = () => {
 
   const [showData, setShowData] = useState(JSON.parse(localStorage.getItem('showData')));
   const [theme, setTheme] = useState(localStorage.getItem('themeNumber') || '1');
+  const [dynamicImage, setDynamicImage] = useState(() => localStorage.getItem('dynamicImage') || '');
   const [font, setFont] = useState(localStorage.getItem('font') || 'font-banner');
   const [align, setAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
   const [lyricsFont, setLyricsFont] = useState(
@@ -90,6 +92,7 @@ const Show = () => {
         JSON.parse(localStorage.getItem('projectorLanguages')) || { geo: false, eng: false, rus: false },
       );
       setTheme(localStorage.getItem('themeNumber') || '1');
+      setDynamicImage(localStorage.getItem('dynamicImage') || '');
       setShowData(JSON.parse(localStorage.getItem('showData')));
       setFont(localStorage.getItem('font') || 'font-banner');
       setAlign(localStorage.getItem('projectorAlign') || 'left');
@@ -106,6 +109,52 @@ const Show = () => {
     };
   }, []);
 
+  /**
+   * The relay path: a console on another device — a phone, or a second
+   * machine — cannot reach this tab through `localStorage`, so it pushes the
+   * slide *and* the projector look, which is read off this browser's own keys
+   * only when no room is in play.
+   */
+  useEffect(() => {
+    const room = readRoom();
+
+    if (!room) {
+      return undefined;
+    }
+
+    startRelay(room);
+
+    const off = onRelayMessage(payload => {
+      if (!payload?.showData) {
+        return;
+      }
+
+      setShowData(payload.showData);
+
+      const projector = payload.projector;
+
+      if (!projector) {
+        return;
+      }
+
+      setTheme(projector.theme || '1');
+      setFont(projector.font || 'font-banner');
+      setAlign(projector.align || 'left');
+      setLyricsFont(projector.lyricsFont || projector.font || 'font-banner');
+      setLyricsAlign(projector.lyricsAlign || projector.align || 'left');
+      setOrder(Array.isArray(projector.order) ? projector.order : DEFAULT_ORDER);
+      setTransitionMs(projector.transitionMs ?? 320);
+      setProjectorLanguages(projector.enabled || { geo: false, eng: false, rus: false });
+
+      setDynamicImage(projector.dynamicImage || '');
+    });
+
+    return () => {
+      off();
+      stopRelay();
+    };
+  }, []);
+
   useEffect(() => {
     if (!imageContainer.current) {
       return;
@@ -114,13 +163,13 @@ const Show = () => {
     imageContainer.current.style.backgroundImage = '';
 
     if (theme === 'dynamicIMG') {
-      imageContainer.current.style.backgroundImage = `url(${localStorage.getItem('dynamicImage')})`;
+      imageContainer.current.style.backgroundImage = `url(${dynamicImage})`;
       setBgStr('');
       return;
     }
 
     setBgStr(themeClassName(theme));
-  }, [theme]);
+  }, [theme, dynamicImage]);
 
   useEffect(() => {
     if (JSON.stringify(showData) === JSON.stringify(displayed)) {

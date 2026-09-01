@@ -1,12 +1,14 @@
-import { MdOutlineSlideshow, MdOutlineVideocam } from 'react-icons/md';
+import { MdOutlineDevices, MdOutlineSlideshow, MdOutlineVideocam } from 'react-icons/md';
 import Modal from '../ui/Modal';
 import StyleSection from './StyleSection';
 import ObsSection from './ObsSection';
+import DevicesSection from './DevicesSection';
 import { useStudio } from '../StudioProvider';
 
 const PANELS = [
   { id: 'projector', label: 'Projector', Icon: MdOutlineSlideshow, Panel: StyleSection },
   { id: 'stream', label: 'Stream', Icon: MdOutlineVideocam, Panel: ObsSection },
+  { id: 'devices', label: 'Devices', Icon: MdOutlineDevices, Panel: DevicesSection },
 ];
 
 /**

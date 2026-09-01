@@ -3,6 +3,7 @@ import useData from '../hooks/useData';
 import { fitText, refitOnFontLoad } from '../lib/fitText';
 import { OBS_EVENT } from '../lib/obsBridge';
 import { readTransition } from '../lib/transition';
+import { onRelayMessage, readRoom, startRelay, stopRelay } from '../lib/relay';
 
 /**
  * The OBS Browser Source output: the live slide as a broadcast lower third,
@@ -211,6 +212,46 @@ const Lower3rd = () => {
     return () => window.removeEventListener(OBS_EVENT, onSlide);
   }, []);
 
+  /**
+   * The relay path, and the one that needs no OBS setup at all: with `?room=`
+   * on the Browser Source URL the slide arrives straight from the console
+   * over a socket, so obs-websocket — its server, its password, its
+   * same-machine limit — drops out of the picture entirely.
+   */
+  useEffect(() => {
+    const room = readRoom();
+
+    if (!room) {
+      return undefined;
+    }
+
+    startRelay(room);
+
+    const off = onRelayMessage(payload => {
+      if (!payload?.showData) {
+        return;
+      }
+
+      setSlide({ showData: payload.showData, style: { ...readStyleFromStorage(), ...payload.style } });
+
+      const sample =
+        payload.showData.lyrics?.text ||
+        LANGS.map(lang => payload.showData[lang]?.[0]?.bv).find(Boolean) ||
+        '(no verse text in payload)';
+
+      setReceived(current => ({
+        count: current.count + 1,
+        at: new Date().toLocaleTimeString(),
+        sample: String(sample).slice(0, 60),
+      }));
+    });
+
+    return () => {
+      off();
+      stopRelay();
+    };
+  }, []);
+
   // Preview path: only meaningful in a normal tab, where the console shares
   // this origin's storage. Inert inside OBS.
   useEffect(() => {
@@ -363,7 +404,7 @@ const Lower3rd = () => {
         <div className="lower3rd-debug">
           <strong>lower3rd</strong> — page loaded
           <br />
-          OBS events received: {received.count}
+          Slides received: {received.count}
           {received.at && ` (last ${received.at})`}
           <br />
           {received.count === 0

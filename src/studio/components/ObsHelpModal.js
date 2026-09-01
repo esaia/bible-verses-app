@@ -20,7 +20,7 @@ const Code = ({ children }) => (
 const Strong = ({ children }) => <strong className="font-semibold text-studio-text">{children}</strong>;
 
 /** A value to be carried into OBS, with the copy button next to it. */
-const CopyField = ({ label, value }) => {
+export const CopyField = ({ label, value }) => {
   const [copied, setCopied] = useState(false);
 
   const copy = () => {

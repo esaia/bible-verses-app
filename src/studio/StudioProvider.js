@@ -3,6 +3,7 @@ import { versionsByLang } from '../data/bible';
 import useChapter, { LANGS } from './useChapter';
 import { TRANSITION_KEY, clampTransition, readTransition } from '../lib/transition';
 import { pushObs } from '../lib/obsBridge';
+import { ensureRoom, publishRelay, startRelay, stopRelay, writeRoom } from '../lib/relay';
 
 const StudioContext = createContext(null);
 
@@ -211,16 +212,56 @@ const StudioProvider = ({ children }) => {
     ],
   );
 
+  /**
+   * Everything `/show` needs to draw a slide, for the same reason the OBS
+   * style travels with the content: a projector on another machine reached
+   * through the relay cannot read this browser's projector keys either.
+   */
+  const projectorStyle = useMemo(
+    () => ({
+      theme,
+      dynamicImage,
+      font: projectorFont,
+      align: textAlign,
+      lyricsFont,
+      lyricsAlign,
+      order: langOrder,
+      enabled,
+      transitionMs,
+    }),
+    [theme, dynamicImage, projectorFont, textAlign, lyricsFont, lyricsAlign, langOrder, enabled, transitionMs],
+  );
+
   // The last slide pushed, kept so a style change can redraw OBS without the
   // operator having to advance a verse. Held in a ref because `showData` lives
   // in `localStorage`, not in state.
   const lastShowRef = useRef(read('showData', emptyShowData));
   const obsStyleRef = useRef(obsStyle);
+  const projectorStyleRef = useRef(projectorStyle);
 
   useEffect(() => {
     obsStyleRef.current = obsStyle;
+    projectorStyleRef.current = projectorStyle;
+
     pushObs({ showData: lastShowRef.current, style: obsStyle });
-  }, [obsStyle]);
+    publishRelay({ showData: lastShowRef.current, style: obsStyle, projector: projectorStyle });
+  }, [obsStyle, projectorStyle]);
+
+  // The room this console publishes into. Created on first run so there is
+  // nothing to set up; `?room=` carries a phone into an existing one.
+  const [room, setRoomState] = useState(ensureRoom);
+
+  useEffect(() => {
+    startRelay(room);
+
+    return () => stopRelay();
+  }, [room]);
+
+  /** Join another room, or hand this one a fresh code. */
+  const setRoom = useCallback(next => {
+    writeRoom(next);
+    setRoomState(next);
+  }, []);
 
   /**
    * Put a slide on both outputs: `showData` for the `/show` projector tab, and
@@ -231,6 +272,7 @@ const StudioProvider = ({ children }) => {
     lastShowRef.current = payload;
     write('showData', payload);
     pushObs({ showData: payload, style: obsStyleRef.current });
+    publishRelay({ showData: payload, style: obsStyleRef.current, projector: projectorStyleRef.current });
   }, []);
 
   /** Languages to fetch: everything armed for the projector, plus the admin
@@ -850,6 +892,8 @@ const StudioProvider = ({ children }) => {
       settingsTab,
       openSettings,
       closeSettings,
+      room,
+      setRoom,
       refreshBlocks,
       loadChapterCount,
       loadVerseCount,
@@ -903,6 +947,8 @@ const StudioProvider = ({ children }) => {
       moveBlock,
       moveBlockTo,
       draggingId,
+      room,
+      setRoom,
       clearBlocks,
       goLive,
       selectVerse,
