@@ -1,16 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineX } from 'react-icons/hi';
-import IconButton from '../ui/IconButton';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useStudio, groupVerses } from '../StudioProvider';
 import { plain, verseRef } from '../text';
 import { fitText, refitOnFontLoad } from '../../lib/fitText';
 
 const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
-const MIN_WIDTH = 260;
-const HEADER_HEIGHT = 36;
-const ASPECT = 16 / 9;
-const GEOMETRY_KEY = 'studioPreviewGeometry';
 const MODE_KEY = 'studioPreviewMode';
 
 /** The frame the lower third is authored against; the iframe is scaled from it. */
@@ -22,66 +16,17 @@ const MODES = [
   { value: 'stream', label: 'Lower third' },
 ];
 
-/** The body is locked to the projector's 16:9 so the preview never lies about framing. */
-const heightFor = width => Math.round(width / ASPECT) + HEADER_HEIGHT;
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
-
-const sanitize = value =>
-  value && typeof value.x === 'number' && typeof value.width === 'number'
-    ? { x: value.x, y: value.y, width: value.width, height: value.height }
-    : null;
-
-/** Panel geometry cut down to the window it is opening in — a size saved on a
- *  desktop must not reopen wider than a phone. */
-const fit = value => {
-  if (!value) {
-    return null;
-  }
-
-  const width = clamp(value.width, Math.min(MIN_WIDTH, window.innerWidth - 16), window.innerWidth - 16);
-  const height = heightFor(width);
-
-  return {
-    width,
-    height,
-    x: clamp(value.x, 0, Math.max(0, window.innerWidth - width)),
-    y: clamp(value.y, 0, Math.max(0, window.innerHeight - 48)),
-  };
-};
-
-const readGeometry = () => {
-  try {
-    return fit(sanitize(JSON.parse(localStorage.getItem(GEOMETRY_KEY))));
-  } catch (e) {
-    return null;
-  }
-};
-
-const defaultGeometry = () => {
-  const width = Math.min(380, Math.max(MIN_WIDTH, window.innerWidth - 32));
-  const height = heightFor(width);
-
-  return {
-    width,
-    height,
-    x: Math.max(16, window.innerWidth - width - 16),
-    y: Math.max(16, window.innerHeight - height - 16),
-  };
-};
-
 /**
- * Floating mirror of what the projector is showing. Hidden until the operator
- * opens it, then draggable by its title bar and resizable from the bottom-right
- * grip; position, size and open state all persist.
+ * Mirror of what the projector is showing, docked at the top of the right rail
+ * the way a presentation app puts its output preview: always in the same
+ * place, never in front of the verse it is previewing. It used to float and be
+ * dragged around, which meant it was permanently in the wrong place.
  */
 const PreviewPanel = () => {
   const {
     blocks,
     live,
     enabled,
-    previewOpen,
-    closePreview,
     projectorFont,
     theme,
     dynamicImage,
@@ -100,10 +45,11 @@ const PreviewPanel = () => {
   const screenRef = useRef(null);
   const textRef = useRef(null);
 
-  const [geometry, setGeometry] = useState(readGeometry);
-  const [collapsed, setCollapsed] = useState(false);
   const [mode, setMode] = useState(() => localStorage.getItem(MODE_KEY) || 'projector');
-  const [interaction, setInteraction] = useState(null);
+
+  // The lower third is authored at 1920x1080 and scaled down to whatever width
+  // the rail happens to be, so the preview has to know its own size.
+  const [scale, setScale] = useState(0);
 
   // What is live right now. The fade is keyed on the text itself rather than on
   // the `live` pointer, because editing a passage — adding a verse at the
@@ -128,92 +74,26 @@ const PreviewPanel = () => {
   const [displayed, setDisplayed] = useState({ rows: liveRows, lyrics: liveLyrics, signature });
   const [visible, setVisible] = useState(true);
 
-  // Placed on first open so it lands in the corner of the current window.
-  useEffect(() => {
-    if (previewOpen && !geometry) {
-      setGeometry(defaultGeometry());
-    }
-  }, [previewOpen, geometry]);
-
   useEffect(() => {
     localStorage.setItem(MODE_KEY, mode);
   }, [mode]);
 
-  useEffect(() => {
-    if (geometry) {
-      try {
-        localStorage.setItem(GEOMETRY_KEY, JSON.stringify(geometry));
-      } catch (e) {
-        // Non-critical.
-      }
+  useLayoutEffect(() => {
+    const box = screenRef.current;
+
+    if (!box) {
+      return undefined;
     }
-  }, [geometry]);
 
-  // Keep the panel reachable when the window shrinks — a panel sized on a
-  // desktop must narrow rather than hang off the side of a phone.
-  useEffect(() => {
-    const handleResize = () => setGeometry(current => fit(current) || current);
+    const measure = () => setScale(box.clientWidth / STREAM_W);
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    measure();
 
-  const startInteraction = useCallback(
-    (mode, event) => {
-      if (event.button !== 0 || !geometry) {
-        return;
-      }
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
 
-      event.preventDefault();
-      setInteraction(mode);
-
-      const pointerX = event.clientX;
-      const pointerY = event.clientY;
-      const origin = { ...geometry };
-
-      const handleMove = e => {
-        const dx = e.clientX - pointerX;
-        const dy = e.clientY - pointerY;
-
-        if (mode === 'drag') {
-          setGeometry({
-            width: origin.width,
-            height: origin.height,
-            x: clamp(origin.x + dx, 0, window.innerWidth - origin.width),
-            y: clamp(origin.y + dy, 0, window.innerHeight - 48),
-          });
-          return;
-        }
-
-        // Both axes grow together: whichever way the pointer pushed further
-        // wins, and the panel slides back on screen rather than being capped by
-        // whatever space happens to be to its right.
-        const width = clamp(
-          origin.width + Math.max(dx, dy * ASPECT),
-          MIN_WIDTH,
-          Math.min(window.innerWidth - 16, (window.innerHeight - 16 - HEADER_HEIGHT) * ASPECT),
-        );
-        const height = heightFor(width);
-
-        setGeometry({
-          width,
-          height,
-          x: clamp(origin.x, 0, window.innerWidth - width),
-          y: clamp(origin.y, 0, window.innerHeight - height),
-        });
-      };
-
-      const handleUp = () => {
-        setInteraction(null);
-        document.removeEventListener('mousemove', handleMove);
-        document.removeEventListener('mouseup', handleUp);
-      };
-
-      document.addEventListener('mousemove', handleMove);
-      document.addEventListener('mouseup', handleUp);
-    },
-    [geometry],
-  );
+    return () => observer.disconnect();
+  }, [mode]);
 
   useEffect(() => {
     if (signature === displayed.signature) {
@@ -272,145 +152,100 @@ const PreviewPanel = () => {
   const rows = displayed.rows;
   const hasContent = Boolean(displayed.lyrics) || rows.some(row => row.items.length > 0);
 
-  if (!previewOpen || !geometry) {
-    return null;
-  }
-
   return (
-    <div
-      className="fixed z-40 flex flex-col overflow-hidden rounded-studio-lg bg-studio-slide shadow-studio-modal"
-      style={{
-        left: geometry.x,
-        top: geometry.y,
-        width: geometry.width,
-        height: collapsed ? 'auto' : geometry.height,
-        userSelect: interaction ? 'none' : undefined,
-      }}
-    >
-      <div
-        onMouseDown={e => startInteraction('drag', e)}
-        style={{ height: HEADER_HEIGHT }}
-        className={`flex shrink-0 items-center justify-between border-b border-white/10 bg-studio-bar px-3 ${
-          interaction === 'drag' ? 'cursor-grabbing' : 'cursor-grab'
-        }`}
-      >
-        <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
+    <div className="shrink-0 border-b border-studio-border">
+      <div className="flex h-9 items-center justify-between gap-2 px-2">
+        <div className="flex items-center gap-0.5">
           {MODES.map(item => (
             <button
               key={item.value}
               type="button"
               aria-pressed={mode === item.value}
               onClick={() => setMode(item.value)}
-              className={`rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium transition-colors duration-150
+              className={`rounded-[4px] px-2 py-1 text-[11px] font-medium transition-colors duration-150
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-studio-accent/40
-                ${mode === item.value ? 'bg-white/20 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}
+                ${
+                  mode === item.value
+                    ? 'bg-studio-surface text-studio-text'
+                    : 'text-studio-muted hover:bg-studio-surface hover:text-studio-text'
+                }`}
             >
               {item.label}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-1.5" onMouseDown={e => e.stopPropagation()}>
-          <span className="flex items-center gap-1.5 pr-1 text-[10px] font-semibold tracking-wide text-white/80">
-            <span className={`h-1.5 w-1.5 rounded-full ${hasContent ? 'bg-studio-live' : 'bg-white/30'}`} />
-            {hasContent ? 'LIVE' : 'IDLE'}
-          </span>
-
-          <IconButton
-            tone="onDark"
-            label={collapsed ? 'Expand preview' : 'Collapse preview'}
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            {collapsed ? <HiOutlineChevronUp className="text-sm" /> : <HiOutlineChevronDown className="text-sm" />}
-          </IconButton>
-
-          <IconButton tone="onDark" label="Close preview" onClick={closePreview}>
-            <HiOutlineX className="text-sm" />
-          </IconButton>
-        </div>
+        <span className="flex items-center gap-1.5 pr-1 text-[10px] font-semibold tracking-wide text-studio-muted">
+          <span className={`h-1.5 w-1.5 rounded-full ${hasContent ? 'bg-studio-live' : 'bg-studio-border'}`} />
+          {hasContent ? 'LIVE' : 'IDLE'}
+        </span>
       </div>
 
-      {!collapsed && (
-        <>
-          {mode === 'stream' ? (
-            // The real `/lower3rd` page, scaled down, rather than a second
-            // rendering of the same design: same origin means it picks the
-            // slide up through the `storage` event, and its `vh`/`vw` padding
-            // resolves against its own 1920x1080 viewport, so what shows here
-            // is what OBS draws. The chequerboard stands in for the camera and
-            // reads as transparency.
-            <div ref={screenRef} className="preview-alpha relative flex-1 overflow-hidden">
-              <iframe
-                title="Lower third preview"
-                src="/lower3rd"
-                tabIndex={-1}
-                scrolling="no"
-                style={{
-                  width: STREAM_W,
-                  height: STREAM_H,
-                  border: 0,
-                  transform: `scale(${geometry.width / STREAM_W})`,
-                  transformOrigin: 'top left',
-                  pointerEvents: 'none',
-                }}
-              />
-            </div>
-          ) : (
-            <div
-              ref={screenRef}
-              className={`relative flex-1 overflow-hidden bg-blend-overlay bgblind showbackground
-              ${theme === 'dynamicIMG' ? '' : `bg-${theme}img`}`}
-              style={theme === 'dynamicIMG' && dynamicImage ? { backgroundImage: `url(${dynamicImage})` } : undefined}
-            >
-              <div
-                className="flex h-full w-full items-center justify-center px-[6%]"
-                style={{
-                  opacity: visible ? 1 : 0,
-                  transition: fadeMs === 0 ? 'none' : `opacity ${fadeMs}ms ease-in-out`,
-                }}
-              >
-                {!hasContent ? (
-                  <p className="text-xs text-white/40">Nothing is live</p>
-                ) : displayed.lyrics ? (
-                  <div ref={textRef} className={`w-full ${lyricsFont}`}>
-                    <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[lyricsAlign]}`}>
-                      {displayed.lyrics.split('\n').join(' ')}
-                    </p>
-                  </div>
-                ) : (
-                  <div ref={textRef} className={`w-full ${projectorFont}`}>
-                    {rows.map(({ lang, items }) =>
-                      items.length > 0 ? (
-                        <div key={lang} className="py-[0.35em]">
-                          <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[textAlign]}`}>
-                            {items.map(item => plain(item.bv)).join(' ')}
-                          </p>
-                          <p
-                            className={`italic text-gray-300/90 ${ALIGN_CLASS[textAlign]}`}
-                            style={{ fontSize: '0.72em' }}
-                          >
-                            {items.length > 1
-                              ? `${verseRef(items[0], lang)}-${items[items.length - 1].muxli}`
-                              : verseRef(items[0], lang)}
-                          </p>
-                        </div>
-                      ) : null,
-                    )}
-                  </div>
+      {mode === 'stream' ? (
+        // The real `/lower3rd` page, scaled down, rather than a second
+        // rendering of the same design: same origin means it picks the slide up
+        // through the `storage` event, and its `vh`/`vw` padding resolves
+        // against its own 1920x1080 viewport, so what shows here is what OBS
+        // draws. The chequerboard stands in for the camera and reads as
+        // transparency.
+        <div ref={screenRef} className="preview-alpha relative aspect-video w-full overflow-hidden">
+          <iframe
+            title="Lower third preview"
+            src="/lower3rd"
+            tabIndex={-1}
+            scrolling="no"
+            style={{
+              width: STREAM_W,
+              height: STREAM_H,
+              border: 0,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          ref={screenRef}
+          className={`relative aspect-video w-full overflow-hidden bg-blend-overlay bgblind showbackground
+            ${theme === 'dynamicIMG' ? '' : `bg-${theme}img`}`}
+          style={theme === 'dynamicIMG' && dynamicImage ? { backgroundImage: `url(${dynamicImage})` } : undefined}
+        >
+          <div
+            className="flex h-full w-full items-center justify-center px-[6%]"
+            style={{
+              opacity: visible ? 1 : 0,
+              transition: fadeMs === 0 ? 'none' : `opacity ${fadeMs}ms ease-in-out`,
+            }}
+          >
+            {!hasContent ? (
+              <p className="text-xs text-white/40">Nothing is live</p>
+            ) : displayed.lyrics ? (
+              <div ref={textRef} className={`w-full ${lyricsFont}`}>
+                <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[lyricsAlign]}`}>
+                  {displayed.lyrics.split('\n').join(' ')}
+                </p>
+              </div>
+            ) : (
+              <div ref={textRef} className={`w-full ${projectorFont}`}>
+                {rows.map(({ lang, items }) =>
+                  items.length > 0 ? (
+                    <div key={lang} className="py-[0.35em]">
+                      <p className={`font-semibold leading-snug text-white ${ALIGN_CLASS[textAlign]}`}>
+                        {items.map(item => plain(item.bv)).join(' ')}
+                      </p>
+                      <p className={`italic text-gray-300/90 ${ALIGN_CLASS[textAlign]}`} style={{ fontSize: '0.72em' }}>
+                        {items.length > 1
+                          ? `${verseRef(items[0], lang)}-${items[items.length - 1].muxli}`
+                          : verseRef(items[0], lang)}
+                      </p>
+                    </div>
+                  ) : null,
                 )}
               </div>
-            </div>
-          )}
-
-          <div
-            role="separator"
-            aria-label="Resize preview"
-            onMouseDown={e => startInteraction('resize', e)}
-            className="absolute bottom-0 right-0 z-10 h-5 w-5 cursor-nwse-resize"
-          >
-            <span className="absolute bottom-1 right-1 block h-2 w-2 border-b-2 border-r-2 border-white/40" />
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

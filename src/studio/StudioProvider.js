@@ -81,6 +81,12 @@ const StudioProvider = ({ children }) => {
   const [live, setLive] = useState(() => read('studioLive', null));
   const [previewOpen, setPreviewOpen] = useState(() => read('studioPreviewOpen', false));
 
+  // Below `lg` the output rail has no column to live in and slides over the
+  // console instead, so it must never be open on arrival — a preview left on
+  // from a desktop would otherwise cover the whole phone on load. Deliberately
+  // not persisted: it takes a tap, every time.
+  const [previewDrawer, setPreviewDrawer] = useState(false);
+
   // Which workspace the main pane is showing: the passages, or the music library.
   const [tab, setTab] = useState(() => {
     const stored = read('studioTab', 'bible');
@@ -867,8 +873,15 @@ const StudioProvider = ({ children }) => {
   const openSettings = useCallback((panel = 'projector') => setSettingsTab(panel), []);
   const closeSettings = useCallback(() => setSettingsTab(null), []);
 
-  const togglePreview = useCallback(() => setPreviewOpen(current => !current), []);
-  const closePreview = useCallback(() => setPreviewOpen(false), []);
+  const togglePreview = useCallback(() => {
+    setPreviewOpen(current => !current);
+    setPreviewDrawer(current => !current);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    setPreviewDrawer(false);
+  }, []);
 
   /** Move the live verse within its own block. */
   const stepLive = useCallback(
@@ -969,6 +982,7 @@ const StudioProvider = ({ children }) => {
       blocks,
       live,
       previewOpen,
+      previewDrawer,
       tab,
       setTab,
       songs,
@@ -1049,6 +1063,7 @@ const StudioProvider = ({ children }) => {
       blocks,
       live,
       previewOpen,
+      previewDrawer,
       tab,
       songs,
       activeSongId,

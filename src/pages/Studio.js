@@ -4,7 +4,7 @@ import AppBar from '../studio/components/AppBar';
 import Sidebar from '../studio/components/Sidebar';
 import SearchBar from '../studio/components/SearchBar';
 import PassageBlock from '../studio/components/PassageBlock';
-import PreviewPanel from '../studio/components/PreviewPanel';
+import RightRail from '../studio/components/RightRail';
 import SizeSlider from '../studio/components/SizeSlider';
 import AudioProvider from '../studio/AudioProvider';
 import AudioLibrary from '../studio/components/AudioLibrary';
@@ -115,9 +115,9 @@ const StudioWorkspace = () => {
 
           {tab !== 'audio' && <SizeSlider />}
         </div>
-      </div>
 
-      <PreviewPanel />
+        <RightRail />
+      </div>
 
       <SettingsModal />
 
