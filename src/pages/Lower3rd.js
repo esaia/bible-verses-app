@@ -274,19 +274,18 @@ const Lower3rd = () => {
     const blocks = Math.max(1, texts.length);
     const band = Math.min(window.innerHeight * MAX_HEIGHT_RATIO, blocks * budget * lineHeight + overhead);
 
+    // What one language may take of the band. The band alone would let the
+    // first translation spend all of it and squeeze the rest, so each passage
+    // is held to its share — but within that share it may use as many lines as
+    // it likes. Counting lines instead would make a long slide shrink until it
+    // fitted the budget, which is how a whole verse ended up as two lines of
+    // unreadable text rather than four legible ones.
+    const share = band / blocks;
+
     fitText(element, band, {
       min: MIN_FONT_SIZE,
       max,
-      // The band alone would let one language spend the whole of it on a
-      // single run of text; this holds each passage to its own share.
-      // Measured against its own line-height rather than a fixed pixel budget,
-      // so it holds for any typeface. The half-line absorbs sub-pixel rounding.
-      constrain: el =>
-        [...el.querySelectorAll('.lower3rd-text')].every(line => {
-          const height = parseFloat(getComputedStyle(line).lineHeight);
-
-          return !height || line.offsetHeight <= height * (budget + 0.5);
-        }),
+      constrain: el => [...el.querySelectorAll('.lower3rd-text')].every(line => line.offsetHeight <= share),
     });
   }, [lyrics]);
 
