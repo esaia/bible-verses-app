@@ -4,6 +4,9 @@ import useChapter, { LANGS } from './useChapter';
 import { TRANSITION_KEY, clampTransition, readTransition } from '../lib/transition';
 import { pushObs } from '../lib/obsBridge';
 import { adoptRelay, ensureRoom, onRelayMessage, publishRelay, startRelay, stopRelay, writeRoom } from '../lib/relay';
+import { serveAssets } from '../lib/peerAssets';
+import { loadLocalFile } from '../lib/localMedia';
+import { LOCAL_THEME } from '../data/themes';
 
 const StudioContext = createContext(null);
 
@@ -107,6 +110,13 @@ const StudioProvider = ({ children }) => {
   const [projectorFont, setProjectorFont] = useState(() => localStorage.getItem('font') || 'font-banner');
   const [theme, setTheme] = useState(() => localStorage.getItem('themeNumber') || '1');
   const [dynamicImage, setDynamicImage] = useState(() => localStorage.getItem('dynamicImage') || '');
+
+  /**
+   * The operator's own background, as the little that can be written down: the
+   * picture itself stays in this browser's IndexedDB and reaches a projector
+   * on another machine over the peer connection, not through the relay.
+   */
+  const [localImage, setLocalImage] = useState(() => read('localImage', null));
   const [textAlign, setTextAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
 
   // Songs get their own typeface and alignment: a verse reads as a paragraph,
@@ -163,6 +173,7 @@ const StudioProvider = ({ children }) => {
   useEffect(() => localStorage.setItem('font', projectorFont), [projectorFont]);
   useEffect(() => localStorage.setItem('themeNumber', theme), [theme]);
   useEffect(() => localStorage.setItem('dynamicImage', dynamicImage), [dynamicImage]);
+  useEffect(() => write('localImage', localImage), [localImage]);
   useEffect(() => localStorage.setItem('projectorAlign', textAlign), [textAlign]);
   useEffect(() => localStorage.setItem('lyricsFont', lyricsFont), [lyricsFont]);
   useEffect(() => localStorage.setItem('lyricsAlign', lyricsAlign), [lyricsAlign]);
@@ -230,6 +241,7 @@ const StudioProvider = ({ children }) => {
     () => ({
       theme,
       dynamicImage,
+      localImage,
       font: projectorFont,
       align: textAlign,
       lyricsFont,
@@ -238,7 +250,18 @@ const StudioProvider = ({ children }) => {
       enabled,
       transitionMs,
     }),
-    [theme, dynamicImage, projectorFont, textAlign, lyricsFont, lyricsAlign, langOrder, enabled, transitionMs],
+    [
+      theme,
+      dynamicImage,
+      localImage,
+      projectorFont,
+      textAlign,
+      lyricsFont,
+      lyricsAlign,
+      langOrder,
+      enabled,
+      transitionMs,
+    ],
   );
 
   // The last slide pushed, kept so a style change can redraw OBS without the
@@ -363,6 +386,11 @@ const StudioProvider = ({ children }) => {
       if (projector) {
         setTheme(projector.theme || '1');
         setDynamicImage(projector.dynamicImage || '');
+        setLocalImage(current =>
+          JSON.stringify(current) === JSON.stringify(projector.localImage || null)
+            ? current
+            : projector.localImage || null,
+        );
         setProjectorFont(projector.font || 'font-banner');
         setTextAlign(projector.align || 'left');
         setLyricsFont(projector.lyricsFont || projector.font || 'font-banner');
@@ -393,6 +421,31 @@ const StudioProvider = ({ children }) => {
     });
 
     return off;
+  }, []);
+
+  /**
+   * Answer a projector asking for one of this machine's own pictures. The
+   * listener is harmless while nothing asks, and the file never leaves this
+   * browser except over the data channel the request negotiates.
+   */
+  useEffect(() => serveAssets(loadLocalFile), []);
+
+  /**
+   * Take one of the operator's own pictures as the projector background. Only
+   * its identity travels with the slide; a projector that has not seen the
+   * file fetches it peer-to-peer, once, and keeps it.
+   */
+  const setLocalBackground = useCallback(record => {
+    if (!record) {
+      // Nothing to show is not a background: fall back to a stock one rather
+      // than leaving the projector on a picture that is no longer there.
+      setLocalImage(null);
+      setTheme(current => (current === LOCAL_THEME ? '1' : current));
+      return;
+    }
+
+    setLocalImage({ id: record.id, name: record.name, type: record.type, size: record.size });
+    setTheme(LOCAL_THEME);
   }, []);
 
   /** Join another room, or hand this one a fresh code. */
@@ -1005,6 +1058,8 @@ const StudioProvider = ({ children }) => {
       setTheme,
       dynamicImage,
       setDynamicImage,
+      localImage,
+      setLocalBackground,
       textAlign,
       setTextAlign,
       lyricsFont,
@@ -1081,6 +1136,8 @@ const StudioProvider = ({ children }) => {
       projectorFont,
       theme,
       dynamicImage,
+      localImage,
+      setLocalBackground,
       textAlign,
       lyricsFont,
       lyricsAlign,

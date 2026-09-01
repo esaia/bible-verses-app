@@ -59,6 +59,13 @@ export const newRoom = () => {
 export const validRoom = value => typeof value === 'string' && ROOM_PATTERN.test(value);
 
 /**
+ * Who this page is, for the length of one document. WebRTC handshakes are
+ * broadcast to the whole room — the relay has no notion of addressing — so
+ * both ends need something to tell "mine" from "someone else's" by.
+ */
+export const PEER_ID = `${Math.random().toString(36).slice(2, 10)}`;
+
+/**
  * The room this page belongs to. `?room=` wins, so one link carries a phone,
  * a projector window or a Browser Source into the right room without anything
  * being typed; otherwise it is whatever this browser saved.
@@ -286,6 +293,16 @@ export const onRelayMessage = listener => {
 export const adoptRelay = payload => {
   pending = payload;
 };
+
+/**
+ * WebRTC signalling: offers, answers and ICE candidates for the data channel
+ * that carries the operator's own background images.
+ *
+ * Unlike a slide this is never queued or stored. A handshake is only
+ * meaningful to a peer that is negotiating right now, so one that misses the
+ * socket is simply retried by whoever wanted the picture.
+ */
+export const sendSignal = payload => send({ ...payload, type: 'signal' });
 
 /** Called by the console. Queued when the socket is down, sent on connect. */
 export const publishRelay = payload => {

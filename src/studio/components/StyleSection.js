@@ -2,6 +2,7 @@ import { MdFormatAlignCenter, MdFormatAlignLeft, MdFormatAlignRight } from 'reac
 import Select from '../ui/Select';
 import { useStudio } from '../StudioProvider';
 import { THEMES } from '../../data/themes';
+import LocalBackgrounds from './LocalBackgrounds';
 import { MAX_TRANSITION_MS, MIN_TRANSITION_MS } from '../../lib/transition';
 
 const ALIGNMENTS = [
@@ -113,6 +114,8 @@ const StyleSection = () => {
             ))}
           </div>
         </div>
+
+        <LocalBackgrounds />
 
         <div className="mt-2 flex items-center gap-1.5">
           <input

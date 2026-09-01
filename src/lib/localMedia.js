@@ -11,29 +11,39 @@
  */
 
 const DB_NAME = 'studioMedia';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'files';
+
+/**
+ * Files that arrived from *another* device over the peer connection, kept
+ * apart from the ones this machine owns: a projector should not offer someone
+ * else's background back as its own library, and a cached copy is disposable
+ * in a way an operator's own file is not.
+ */
+const RECEIVED = 'received';
 
 const openDb = () =>
   new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE)) {
-        request.result.createObjectStore(STORE, { keyPath: 'id' });
-      }
+      [STORE, RECEIVED].forEach(name => {
+        if (!request.result.objectStoreNames.contains(name)) {
+          request.result.createObjectStore(name, { keyPath: 'id' });
+        }
+      });
     };
 
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 
-const run = async (mode, work) => {
+const run = async (mode, work, name = STORE) => {
   const db = await openDb();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE, mode);
-    const request = work(transaction.objectStore(STORE));
+    const transaction = db.transaction(name, mode);
+    const request = work(transaction.objectStore(name));
 
     transaction.oncomplete = () => resolve(request?.result);
     transaction.onerror = () => reject(transaction.error);
@@ -57,10 +67,25 @@ export const saveLocalFile = async file => {
 
 export const loadLocalFiles = () => run('readonly', store => store.getAll());
 
+export const loadLocalFile = id => run('readonly', store => store.get(id));
+
 export const deleteLocalFile = id => run('readwrite', store => store.delete(id));
+
+/**
+ * The projector's copy of a background it was sent. Kept so a reload — or a
+ * console that has since been closed — does not blank the screen: the picture
+ * is already here, and the transfer only has to happen once.
+ */
+export const saveReceivedFile = record => run('readwrite', store => store.put(record), RECEIVED);
+
+export const loadReceivedFile = id => run('readonly', store => store.get(id), RECEIVED);
 
 /** Strips the extension, so the list reads like titles rather than filenames. */
 export const titleFromName = name => name.replace(/\.[^.]+$/, '');
+
+/** Everything an `<img>` will actually draw. */
+export const isImageFile = file =>
+  file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|bmp)$/i.test(file.name);
 
 /** Everything a `<audio>` element will actually play. */
 export const isAudioFile = file =>

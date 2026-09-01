@@ -148,26 +148,11 @@ export class Room {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  async webSocketMessage(sender, message) {
-    if (typeof message !== 'string' || message.length > MAX_MESSAGE_BYTES) {
-      return;
-    }
-
-    // Only a slide is worth keeping and passing on. Anything else — a stray
-    // keepalive, a client from a future version — must not become the payload
-    // replayed to everything that joins next.
-    try {
-      if (!JSON.parse(message)?.showData) {
-        return;
-      }
-    } catch (e) {
-      return;
-    }
-
-    await this.state.storage.put('last', message);
-
-    // Everyone but the sender: the console already knows what it just pushed,
-    // and echoing would fight its own local state.
+  /**
+   * Everyone but the sender: the console already knows what it just pushed,
+   * and echoing would fight its own local state.
+   */
+  relay(message, sender) {
     for (const peer of this.state.getWebSockets()) {
       if (peer !== sender) {
         try {
@@ -177,6 +162,40 @@ export class Room {
         }
       }
     }
+  }
+
+  async webSocketMessage(sender, message) {
+    if (typeof message !== 'string' || message.length > MAX_MESSAGE_BYTES) {
+      return;
+    }
+
+    let payload;
+
+    try {
+      payload = JSON.parse(message);
+    } catch (e) {
+      return;
+    }
+
+    // WebRTC handshakes for the peer-to-peer background transfer. Passed
+    // straight through and deliberately not stored: an offer is addressed to a
+    // socket that is answering it right now, and replaying one to whatever
+    // joins next would be noise. The picture itself never touches the relay —
+    // that is the whole point of the data channel it is negotiating.
+    if (payload?.type === 'signal') {
+      this.relay(message, sender);
+      return;
+    }
+
+    // Only a slide is worth keeping. Anything else — a stray keepalive, a
+    // client from a future version — must not become the payload replayed to
+    // everything that joins next.
+    if (!payload?.showData) {
+      return;
+    }
+
+    await this.state.storage.put('last', message);
+    this.relay(message, sender);
   }
 
   async webSocketClose(ws) {

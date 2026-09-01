@@ -75,6 +75,7 @@ Three layers, all global:
 | `versions`          | `VersionSelect`                   | `BibleSettingProvider`         |
 | `themeNumber`       | `SelectTheme`                     | `/show` background             |
 | `dynamicImage`      | `SelectTheme`                     | `/show` (custom bg URL)        |
+| `localImage`        | `StudioProvider.setLocalBackground` | `/show` (which of the operator's own pictures; the bytes travel by WebRTC) |
 | `font`              | `SelectTheme`                     | app + `/show`                  |
 | `darkmode`          | `DarkModeSwitcher`                | `App`                          |
 | `obsBridge`         | `ObsSection` (via `lib/obsBridge`)| `lib/obsBridge` (enabled/url/password) |
@@ -138,6 +139,32 @@ when OBS is not connected, so `/show` is unaffected.
 
 Setup, troubleshooting and the `?debug=1` overlay are documented in
 [`docs/obs-lower-third.md`](docs/obs-lower-third.md).
+
+## Operator's own backgrounds (WebRTC)
+
+A picture the operator adds in Settings → Projector lives in that browser's
+IndexedDB (`studioMedia`, store `files`), like the music library. `localStorage`
+and the relay both fail to carry it to a projector on another machine: the
+relay is sized for a few kB of verse text, and a blob URL dies with the
+document that minted it.
+
+So only the *identity* rides with the slide (`projector.localImage`), and
+`/show` fetches the bytes itself over a WebRTC data channel (`lib/peerAssets.js`):
+
+- **The relay is only the switchboard.** Offers, answers and ICE candidates go
+  through it as `{ type: 'signal', … }` messages, which the Worker passes
+  through and never stores. The picture itself never touches the relay.
+- **`/show` initiates**, the console answers. A room with two consoles gets two
+  answers; the first wins and the loser's candidates are ignored.
+- **A received file is cached** in the `received` store, so a reload — or a
+  console that has since been shut — does not blank the screen.
+- The console's own projector tab finds the file in the same IndexedDB and
+  never negotiates anything.
+- STUN only, no TURN. Two machines on one church LAN connect on host
+  candidates.
+
+The signal pass-through is a **Worker change**: `/show` gets nothing until
+`relay/` is redeployed.
 
 ## Conventions
 

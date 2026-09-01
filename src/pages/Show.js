@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SlSizeFullscreen } from 'react-icons/sl';
 import TextShow from '../components/result-versions/TextShow';
 import { fitText, refitOnFontLoad } from '../lib/fitText';
-import { themeClassName } from '../data/themes';
+import { LOCAL_THEME, themeClassName } from '../data/themes';
+import { loadLocalFile, loadReceivedFile, saveReceivedFile } from '../lib/localMedia';
+import { requestAsset } from '../lib/peerAssets';
 import { readTransition } from '../lib/transition';
 import { onRelayMessage, readRoom, startRelay, stopRelay } from '../lib/relay';
 
@@ -10,6 +12,14 @@ const ALIGN_CLASS = { left: 'text-left', center: 'text-center', right: 'text-rig
 
 const LANGS = ['geo', 'eng', 'rus'];
 const DEFAULT_ORDER = ['eng', 'geo', 'rus'];
+
+const readLocalImage = () => {
+  try {
+    return JSON.parse(localStorage.getItem('localImage')) || null;
+  } catch (e) {
+    return null;
+  }
+};
 
 const readOrder = () => {
   try {
@@ -41,6 +51,11 @@ const Show = () => {
   const [showData, setShowData] = useState(JSON.parse(localStorage.getItem('showData')));
   const [theme, setTheme] = useState(localStorage.getItem('themeNumber') || '1');
   const [dynamicImage, setDynamicImage] = useState(() => localStorage.getItem('dynamicImage') || '');
+
+  // Which of the operator's own pictures is the background, and the blob URL
+  // for it once this machine actually holds the bytes.
+  const [localImage, setLocalImage] = useState(readLocalImage);
+  const [localUrl, setLocalUrl] = useState('');
   const [font, setFont] = useState(localStorage.getItem('font') || 'font-banner');
   const [align, setAlign] = useState(() => localStorage.getItem('projectorAlign') || 'left');
   const [lyricsFont, setLyricsFont] = useState(
@@ -93,6 +108,7 @@ const Show = () => {
       );
       setTheme(localStorage.getItem('themeNumber') || '1');
       setDynamicImage(localStorage.getItem('dynamicImage') || '');
+      setLocalImage(readLocalImage());
       setShowData(JSON.parse(localStorage.getItem('showData')));
       setFont(localStorage.getItem('font') || 'font-banner');
       setAlign(localStorage.getItem('projectorAlign') || 'left');
@@ -147,6 +163,10 @@ const Show = () => {
       setProjectorLanguages(projector.enabled || { geo: false, eng: false, rus: false });
 
       setDynamicImage(projector.dynamicImage || '');
+
+      // Objects arrive fresh on every push; taking one that has not actually
+      // changed would restart the transfer on every slide.
+      setLocalImage(current => (current?.id === projector.localImage?.id ? current : projector.localImage || null));
     });
 
     return () => {
@@ -155,12 +175,95 @@ const Show = () => {
     };
   }, []);
 
+  /**
+   * A background the operator dragged in on their own machine. It has no URL
+   * anyone else can fetch, so this asks the console for the bytes over the
+   * peer connection and keeps them: a reload, or a console that has since been
+   * shut, must not blank the screen mid-service.
+   *
+   * The console's *own* projector tab finds the file in this browser already
+   * and never negotiates anything.
+   */
+  const localImageId = localImage?.id;
+
+  useEffect(() => {
+    if (theme !== LOCAL_THEME || !localImageId) {
+      setLocalUrl('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    let url = '';
+
+    const show = record => {
+      if (cancelled || !record?.file) {
+        return;
+      }
+
+      url = URL.createObjectURL(record.file);
+      setLocalUrl(url);
+    };
+
+    (async () => {
+      try {
+        const mine = await loadLocalFile(localImageId);
+
+        if (mine) {
+          show(mine);
+          return;
+        }
+
+        const cached = await loadReceivedFile(localImageId);
+
+        if (cached) {
+          show(cached);
+          return;
+        }
+
+        const received = await requestAsset(localImageId);
+
+        if (cancelled) {
+          return;
+        }
+
+        await saveReceivedFile({
+          id: localImageId,
+          name: received.name,
+          type: received.type,
+          file: received.file,
+        });
+
+        show(received);
+      } catch (e) {
+        if (!cancelled) {
+          setLocalUrl('');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [theme, localImageId]);
+
   useEffect(() => {
     if (!imageContainer.current) {
       return;
     }
 
     imageContainer.current.style.backgroundImage = '';
+
+    if (theme === LOCAL_THEME) {
+      // Empty until the transfer lands, which reads as the background simply
+      // arriving a moment late rather than as a broken image.
+      imageContainer.current.style.backgroundImage = localUrl ? `url(${localUrl})` : '';
+      setBgStr('');
+      return;
+    }
 
     if (theme === 'dynamicIMG') {
       imageContainer.current.style.backgroundImage = `url(${dynamicImage})`;
@@ -169,7 +272,7 @@ const Show = () => {
     }
 
     setBgStr(themeClassName(theme));
-  }, [theme, dynamicImage]);
+  }, [theme, dynamicImage, localUrl]);
 
   useEffect(() => {
     if (JSON.stringify(showData) === JSON.stringify(displayed)) {

@@ -40,3 +40,6 @@ export const THEMES = [
 ];
 
 export const themeClassName = id => THEMES.find(theme => theme.id === id)?.className || THEMES[0].className;
+
+/** The operator's own picture, held on their machine rather than in this list. */
+export const LOCAL_THEME = 'localIMG';
