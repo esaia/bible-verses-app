@@ -35,6 +35,14 @@ const MIN_FONT_SIZE = 10;
 const MAX_LINES = { verse: 4, lyrics: 2 };
 
 /**
+ * Largest text size, as a divisor of the frame height. Together with the line
+ * budget above these set the band the bar always fills: a slide that needs
+ * every line gets this size, and no slide is allowed to be taller. Raising a
+ * size therefore raises the bar on every slide, short ones included.
+ */
+const FONT_DIVISOR = { verse: 26, lyrics: 28 };
+
+/**
  * Share of the frame height the bar may grow into. A lower third that creeps
  * past roughly a third of the screen stops reading as an overlay and starts
  * covering the shot.
@@ -235,21 +243,49 @@ const Lower3rd = () => {
     return () => clearTimeout(swap);
   }, [slide, displayed, transitionMs, shown]);
 
+  /**
+   * Fit the slide into a band measured from the line budget at the largest
+   * allowed size. The band is a ceiling, not a reservation: the bar is only as
+   * tall as the slide needs, so a single line gets a slim bar, while no slide
+   * can push the bar past the height a full one would take. That ceiling is
+   * what keeps a short slide from out-growing a long one — the size it is
+   * fitted at is capped, rather than its height being padded out.
+   */
   const resizeText = useCallback(() => {
-    fitText(textRef.current, window.innerHeight * MAX_HEIGHT_RATIO, {
-      min: MIN_FONT_SIZE,
-      // Lyrics are a handful of words and can carry more weight than a verse,
-      // which stacks up to three translations plus a reference in the same bar.
-      max: Math.round(window.innerHeight / (lyrics ? 14 : 22)),
-      // Every passage keeps to two lines. Measured against its own line-height
-      // rather than a fixed pixel budget, so it holds for any typeface or size
-      // the search lands on. The half-line of slack absorbs sub-pixel rounding.
-      constrain: element =>
-        [...element.querySelectorAll('.lower3rd-text')].every(line => {
-          const lineHeight = parseFloat(getComputedStyle(line).lineHeight);
-          const budget = lyrics ? MAX_LINES.lyrics : MAX_LINES.verse;
+    const element = textRef.current;
 
-          return !lineHeight || line.offsetHeight <= lineHeight * (budget + 0.5);
+    if (!element) {
+      return;
+    }
+
+    const budget = lyrics ? MAX_LINES.lyrics : MAX_LINES.verse;
+    const max = Math.round(window.innerHeight / (lyrics ? FONT_DIVISOR.lyrics : FONT_DIVISOR.verse));
+
+    element.style.fontSize = `${max}px`;
+
+    const texts = [...element.querySelectorAll('.lower3rd-text')];
+    const lineHeight = parseFloat(getComputedStyle(texts[0] || element).lineHeight) || max * 1.28;
+
+    // References, the rules between stacked languages and the gaps around them:
+    // whatever the block carries besides the verse text itself. Taken as the
+    // remainder rather than summed rule by rule, so a look that adds its own
+    // furniture is accounted for without naming it here.
+    const overhead = Math.max(0, element.offsetHeight - texts.reduce((total, text) => total + text.offsetHeight, 0));
+    const blocks = Math.max(1, texts.length);
+    const band = Math.min(window.innerHeight * MAX_HEIGHT_RATIO, blocks * budget * lineHeight + overhead);
+
+    fitText(element, band, {
+      min: MIN_FONT_SIZE,
+      max,
+      // The band alone would let one language spend the whole of it on a
+      // single run of text; this holds each passage to its own share.
+      // Measured against its own line-height rather than a fixed pixel budget,
+      // so it holds for any typeface. The half-line absorbs sub-pixel rounding.
+      constrain: el =>
+        [...el.querySelectorAll('.lower3rd-text')].every(line => {
+          const height = parseFloat(getComputedStyle(line).lineHeight);
+
+          return !height || line.offsetHeight <= height * (budget + 0.5);
         }),
     });
   }, [lyrics]);

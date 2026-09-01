@@ -266,7 +266,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 3.5vh 6vw 5vh;
+  /* Equal top and bottom, so a line sits on the middle of the plate rather
+     than above it — with the bar hugging its content, any difference between
+     the two shows up directly as text off centre. */
+  padding: 4.5vh 6vw;
 
   /* Per-variant knobs. Each look below re-points these rather than restating
      the layout, so position (top/bottom) and appearance stay independent. */
@@ -283,8 +286,16 @@
 .lower3rd-bar--top {
   top: 0;
   bottom: auto;
-  padding: 5vh 6vw 3.5vh;
   --l3-dir: to bottom;
+}
+
+/* The bar hugs its content, so this centres nothing in the usual case — it is
+   here for the looks that give the block a floor of their own, where a single
+   line would otherwise sit at the top of it. */
+.lower3rd-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Solid slab — reads harder than the scrim over a busy or bright shot. */
@@ -415,7 +426,7 @@
 .lower3rd-bar--split {
   background: rgba(18, 20, 24, 0.93);
   border-top: 2px solid rgba(198, 94, 43, 0.9);
-  padding: 2.6vh 5vw 3vh;
+  padding: 2.8vh 5vw;
   --l3-fg: #ffffff;
   --l3-ref: #ffffff;
   --l3-shadow: none;
@@ -425,7 +436,6 @@
 .lower3rd-bar--split.lower3rd-bar--top {
   border-top: none;
   border-bottom: 2px solid rgba(198, 94, 43, 0.9);
-  padding: 3vh 5vw 2.6vh;
 }
 
 /* Reversed so the reference — second in the markup, for reading order — sits
